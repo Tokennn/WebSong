@@ -19,7 +19,7 @@ function App() {
           mouseInteractionRadius={0.85}
         />
 
-        <div className="relative z-10 flex min-h-screen items-center px-6 py-16 sm:px-10 lg:px-16">
+        <div className="relative z-10 flex min-h-screen items-center px-6 pt-16 pb-28 sm:px-10 sm:pb-32 lg:px-16 lg:pb-40">
           <div className="max-w-3xl">
             <p className="mb-4 text-sm font-medium uppercase tracking-[0.28em] text-cyan-200/80">
               WebSong
@@ -30,10 +30,11 @@ function App() {
             <p className="mt-6 max-w-xl text-base leading-7 text-zinc-200 sm:text-lg">
               An illustration of the playlists and artists on my Spotify.
             </p>
-            <div className="mt-8">
-              <CraftButtonDemo />
-            </div>
           </div>
+        </div>
+
+        <div className="absolute right-6 bottom-6 z-20 sm:right-10 sm:bottom-10 lg:right-16 lg:bottom-16">
+          <CraftButtonDemo />
         </div>
       </section>
     </main>
