@@ -174,6 +174,96 @@ const SPOTIFY_TEST_ARTISTS = [
     src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174514da623c55dc9d2155705dd',
     alt: 'Lil Baby',
     description: 'Rappeur d’Atlanta majeur de la trap contemporaine, entre technique et mélodie.'
+  },
+  {
+    src: 'https://i.scdn.co/image/02fd758d9805ef44d1caafc35ff17a47f9dff098',
+    alt: 'Bob Marley & The Wailers',
+    description: 'Groupe emblématique du reggae, porté par des classiques intemporels et engagés.'
+  },
+  {
+    src: 'https://image-cdn-ak.spotifycdn.com/image/ab676161000051749f2fb33940aac624dc5d100d',
+    alt: 'Young Thug',
+    description: 'Rappeur d’Atlanta influent, reconnu pour son style vocal atypique et avant-gardiste.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174301a9c599d85d89e7a90fed0',
+    alt: 'Damso',
+    description: 'Rappeur belge francophone majeur, entre introspection sombre et production moderne.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174a4f78bbc847304a2bc118e10',
+    alt: 'Big L',
+    description: 'Figure culte du rap new-yorkais, célèbre pour sa technique et ses punchlines.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174998010cd1075921b5faf16b2',
+    alt: 'Lil Wayne',
+    description: 'Icône du rap US, incontournable pour ses mixtapes et son influence générationnelle.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c52b798deb89eb8414a51b7b',
+    alt: 'Don Toliver',
+    description: 'Artiste US mêlant trap et R&B avec des mélodies planantes et une identité marquée.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab676161000051743bb89e2af531884875a31c7b',
+    alt: 'cinquemani',
+    description: 'Artiste émergent à l’univers urbain moderne, entre toplines mélodiques et flow actuel.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c5f0d80d503eb679845d9661',
+    alt: 'K-Reen',
+    description: 'Chanteuse R&B française de référence, connue pour sa voix et ses ballades marquantes.'
+  },
+  {
+    src: 'https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02ffa513a2e91f50ea4a178983',
+    alt: 'Imagination',
+    description: 'Groupe britannique funk/disco, reconnu pour son groove raffiné des années 80.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174432cb55e0b82419302f7cc5a',
+    alt: 'Keyshia Cole',
+    description: 'Chanteuse R&B américaine à la voix puissante, entre soul contemporaine et émotion brute.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d86c89284b01716db1bc9a17',
+    alt: 'Georges Moustaki',
+    description: 'Auteur-compositeur français emblématique, figure majeure de la chanson poétique.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02ee4644e12bef70636167c6bd',
+    alt: 'Rage Against The Machine (Album)',
+    description: 'Album culte de rock/rap engagé, référence majeure de la scène alternative 90s.'
+  },
+  {
+    src: 'https://i.scdn.co/image/99f49b1947bb7e1156effba51ef87c784952d344',
+    alt: 'Barry White',
+    description: 'Voix légendaire de la soul, célèbre pour ses orchestrations romantiques et son timbre grave.'
+  },
+  {
+    src: 'https://i.scdn.co/image/827529e6f65be4c27f9a97d27943f4fb082d265e',
+    alt: 'Eazy-E',
+    description: 'Pionnier du gangsta rap West Coast et membre fondateur de N.W.A.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c7a711a3d016337b5f5905aa',
+    alt: 'Billy Paul',
+    description: 'Chanteur soul/jazz américain, connu pour ses classiques sophistiqués des années 70.'
+  },
+  {
+    src: 'https://image-cdn-ak.spotifycdn.com/image/ab67616100005174cd9f60ab57585bf3b77ecc51',
+    alt: 'Whitney Houston',
+    description: 'Icône mondiale de la pop/soul, reconnue pour sa voix exceptionnelle.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174f12270128127ba170f90097d',
+    alt: 'Aretha Franklin',
+    description: 'Reine de la soul, artiste légendaire à l’héritage musical immense.'
+  },
+  {
+    src: 'https://image-cdn-fa.spotifycdn.com/image/ab676161000051744c813aece0480cb93c5e86b7',
+    alt: 'Sainté',
+    description: 'Artiste UK entre rap et vibes lounge, avec une esthétique minimaliste moderne.'
   }
 ];
 
