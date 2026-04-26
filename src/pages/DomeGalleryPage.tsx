@@ -1,4 +1,6 @@
-import { ArrowLeftIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import Lenis from 'lenis';
+import { ArrowLeftIcon, ArrowUpRightIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import DomeGallery from '@/components/DomeGallery';
@@ -268,28 +270,104 @@ const SPOTIFY_TEST_ARTISTS = [
 ];
 
 export default function DomeGalleryPage() {
+  const [scrollBlurPx, setScrollBlurPx] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const blurRef = useRef(0);
+  const progressRef = useRef(0);
+
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.1,
+      smoothWheel: true,
+      touchMultiplier: 1.2
+    });
+
+    let rafId = 0;
+
+    const updateBlur = (progress: number) => {
+      const boundedProgress = Math.min(Math.max(progress, 0), 1);
+      const nextBlur = boundedProgress * 18;
+
+      if (Math.abs(nextBlur - blurRef.current) >= 0.05) {
+        blurRef.current = nextBlur;
+        setScrollBlurPx(nextBlur);
+      }
+    };
+
+    lenis.on('scroll', ({ scroll, limit }: { scroll: number; limit: number }) => {
+      const progress = limit > 0 ? scroll / limit : 0;
+      updateBlur(progress);
+      if (Math.abs(progress - progressRef.current) >= 0.005) {
+        progressRef.current = progress;
+        setScrollProgress(progress);
+      }
+    });
+
+    const tick = (time: number) => {
+      lenis.raf(time);
+      rafId = window.requestAnimationFrame(tick);
+    };
+
+    rafId = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, []);
+
+  const domeTranslateY = -42 * scrollProgress;
+  const domeOpacity = Math.max(0, 1 - scrollProgress * 1.15);
+
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-black text-white">
-      <div className="absolute top-6 left-6 z-30">
-        <CraftButton asChild>
-          <Link to="/">
-            <CraftButtonIcon>
-              <ArrowLeftIcon className="size-3 stroke-2" />
-            </CraftButtonIcon>
-            <CraftButtonLabel>Back</CraftButtonLabel>
-          </Link>
-        </CraftButton>
+    <main className="relative min-h-[220vh] w-screen bg-black text-white">
+      <div
+        className={`fixed inset-0 z-40 flex items-center justify-center transition-all duration-500 ${
+          scrollProgress >= 0.82 ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+        }`}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div className="pointer-events-auto">
+          <CraftButton asChild>
+            <Link to="/community">
+              <CraftButtonLabel>Discover</CraftButtonLabel>
+              <CraftButtonIcon>
+                <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+              </CraftButtonIcon>
+            </Link>
+          </CraftButton>
+        </div>
       </div>
 
-      <div className="absolute inset-0 scale-110">
-        <DomeGallery
-          images={SPOTIFY_TEST_ARTISTS}
-          fit={0.6}
-          minRadius={700}
-          overlayBlurColor="#000000"
-          padFactor={0.08}
-          grayscale={false}
-        />
+      <div className="sticky top-0 h-screen overflow-hidden">
+        <div className="absolute top-6 left-6 z-30">
+          <CraftButton asChild>
+            <Link to="/">
+              <CraftButtonIcon>
+                <ArrowLeftIcon className="size-3 stroke-2" />
+              </CraftButtonIcon>
+              <CraftButtonLabel>Back</CraftButtonLabel>
+            </Link>
+          </CraftButton>
+        </div>
+
+        <div
+          className="absolute inset-0 will-change-[transform,filter,opacity]"
+          style={{
+            filter: `blur(${scrollBlurPx}px)`,
+            transform: `translate3d(0, ${domeTranslateY}vh, 0) scale(1.1)`,
+            opacity: domeOpacity
+          }}
+        >
+          <DomeGallery
+            images={SPOTIFY_TEST_ARTISTS}
+            fit={0.6}
+            minRadius={700}
+            overlayBlurColor="#000000"
+            padFactor={0.08}
+            grayscale={false}
+          />
+        </div>
       </div>
     </main>
   );
