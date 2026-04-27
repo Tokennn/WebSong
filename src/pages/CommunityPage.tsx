@@ -62,7 +62,8 @@ const COMMUNITY_SECTIONS: CommunitySection[] = [
 const COMMUNITY_MENU_ITEMS: StaggeredMenuItem[] = [
   { label: 'Home', ariaLabel: 'Go to home page', link: '/' },
   { label: 'Dome', ariaLabel: 'Go to dome page', link: '/dome-gallery' },
-  { label: 'Community', ariaLabel: 'Go to community page', link: '/community' }
+  { label: 'Community', ariaLabel: 'Go to community page', link: '/community' },
+  { label: 'Sign-in', ariaLabel: 'Go to sign in page', link: '/sign-in' }
 ];
 
 const COMMUNITY_SOCIAL_ITEMS: StaggeredMenuSocialItem[] = [

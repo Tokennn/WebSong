@@ -26,7 +26,7 @@ export default function HomePage() {
               Sound made visible.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-zinc-200 sm:text-lg">
-              An illustration of the playlists and artists on my Spotify.
+              An illustration of the playlists and artists on my Spotify and more...
             </p>
           </div>
         </div>
