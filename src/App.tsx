@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import Lenis from 'lenis';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import CommunityPage from '@/pages/CommunityPage';
@@ -26,6 +27,36 @@ function AnimatedPage({ children }: { children: ReactNode }) {
 function App() {
   const location = useLocation();
   const routeKey = location.pathname;
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+
+    const lenis = new Lenis({
+      smoothWheel: true,
+      syncTouch: true,
+      syncTouchLerp: isTouchDevice ? 0.12 : 0.08,
+      touchInertiaExponent: isTouchDevice ? 1.15 : 1.7,
+      duration: isTouchDevice ? 0.95 : 1.15,
+      lerp: isTouchDevice ? 0.13 : 0.1,
+      wheelMultiplier: 1,
+      touchMultiplier: 1
+    });
+
+    let rafId = 0;
+    const tick = (time: number) => {
+      lenis.raf(time);
+      rafId = window.requestAnimationFrame(tick);
+    };
+    rafId = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, []);
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-zinc-950">

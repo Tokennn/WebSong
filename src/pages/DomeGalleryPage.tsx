@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import Lenis from 'lenis';
 import { ArrowLeftIcon, ArrowUpRightIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -276,14 +275,6 @@ export default function DomeGalleryPage() {
   const progressRef = useRef(0);
 
   useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.1,
-      smoothWheel: true,
-      touchMultiplier: 1.2
-    });
-
-    let rafId = 0;
-
     const updateBlur = (progress: number) => {
       const boundedProgress = Math.min(Math.max(progress, 0), 1);
       const nextBlur = boundedProgress * 18;
@@ -294,25 +285,35 @@ export default function DomeGalleryPage() {
       }
     };
 
-    lenis.on('scroll', ({ scroll, limit }: { scroll: number; limit: number }) => {
+    const updateFromScrollPosition = () => {
+      const scroll = window.scrollY;
+      const limit = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
       const progress = limit > 0 ? scroll / limit : 0;
+
       updateBlur(progress);
       if (Math.abs(progress - progressRef.current) >= 0.005) {
         progressRef.current = progress;
         setScrollProgress(progress);
       }
-    });
-
-    const tick = (time: number) => {
-      lenis.raf(time);
-      rafId = window.requestAnimationFrame(tick);
     };
 
-    rafId = window.requestAnimationFrame(tick);
+    let frameId = 0;
+    const requestUpdate = () => {
+      if (frameId !== 0) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updateFromScrollPosition();
+      });
+    };
+
+    updateFromScrollPosition();
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
 
     return () => {
-      window.cancelAnimationFrame(rafId);
-      lenis.destroy();
+      if (frameId !== 0) window.cancelAnimationFrame(frameId);
+      window.removeEventListener('scroll', requestUpdate);
+      window.removeEventListener('resize', requestUpdate);
     };
   }, []);
 

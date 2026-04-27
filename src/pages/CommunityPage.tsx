@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { FiArrowUpRight } from 'react-icons/fi';
+import { ArrowUpRightIcon } from 'lucide-react';
 
 import communityFirstImage from '@/assets/community-first.png';
 import communitySecondImage from '@/assets/community-second.png';
@@ -9,6 +9,7 @@ import GradualBlur from '@/components/GradualBlur';
 import GradientText from '@/components/GradientText';
 import ShinyText from '@/components/ShinyText';
 import StaggeredMenu, { type StaggeredMenuItem, type StaggeredMenuSocialItem } from '@/components/StaggeredMenu';
+import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
 
 const IMG_PADDING = 14;
 
@@ -206,9 +207,12 @@ function CommunityContent({ title, textA, textB, cta }: Omit<CommunitySection, '
       <div className="col-span-1 md:col-span-8">
         <p className="mb-5 text-xl text-neutral-700 md:text-2xl">{renderGradientPhrases(textA)}</p>
         <p className="mb-8 text-xl text-neutral-700 md:text-2xl">{renderGradientPhrases(textB)}</p>
-        <button className="w-full rounded-xl bg-neutral-900 px-8 py-4 text-lg text-white transition-colors hover:bg-neutral-700 md:w-fit">
-          {cta} <FiArrowUpRight className="inline text-xl" />
-        </button>
+        <CraftButton size="lg" className="h-auto w-full rounded-xl px-8 py-4 text-lg md:w-fit">
+          <CraftButtonLabel>{cta}</CraftButtonLabel>
+          <CraftButtonIcon>
+            <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+          </CraftButtonIcon>
+        </CraftButton>
       </div>
     </div>
   );
