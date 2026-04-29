@@ -33,6 +33,8 @@ import type {
   Options as ConfettiOptions
 } from 'canvas-confetti';
 import Grainient from '@/components/Grainient';
+import GradientText from '@/components/GradientText';
+import ShinyText from '@/components/ShinyText';
 
 type Api = { fire: (options?: ConfettiOptions) => void };
 export type ConfettiRef = Api | null;
@@ -597,11 +599,31 @@ export const AuthComponent = ({
               >
                 <BlurFade delay={0.25} className="w-full">
                   <div className="text-center">
-                    <p className={titleClass}>Get started with Us</p>
+                    <ShinyText
+                      text="Get started with Us"
+                      speed={2}
+                      delay={0}
+                      color="#b5b5b5"
+                      shineColor="#ffffff"
+                      spread={120}
+                      direction="left"
+                      yoyo={false}
+                      pauseOnHover={false}
+                      className={cn(titleClass, 'leading-tight')}
+                    />
                   </div>
                 </BlurFade>
                 <BlurFade delay={0.5}>
-                  <p className="text-sm font-medium text-zinc-300">Continue with</p>
+                  <GradientText
+                    colors={['#ffffff', '#e2e8ff', '#bfdbfe', '#ffffff', '#c7d2fe', '#ffffff']}
+                    animationSpeed={4.2}
+                    direction="horizontal"
+                    pauseOnHover={false}
+                    yoyo={true}
+                    className="text-sm font-semibold tracking-wide"
+                  >
+                    Continue with
+                  </GradientText>
                 </BlurFade>
                 <BlurFade delay={0.75}>
                   <div className="flex w-full items-center justify-center gap-4">
