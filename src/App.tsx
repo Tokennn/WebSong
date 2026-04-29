@@ -35,14 +35,15 @@ function App() {
     if (prefersReducedMotion) return;
 
     const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    if (isTouchDevice) return;
 
     const lenis = new Lenis({
       smoothWheel: true,
-      syncTouch: true,
-      syncTouchLerp: isTouchDevice ? 0.12 : 0.08,
-      touchInertiaExponent: isTouchDevice ? 1.15 : 1.7,
-      duration: isTouchDevice ? 0.95 : 1.15,
-      lerp: isTouchDevice ? 0.13 : 0.1,
+      syncTouch: false,
+      syncTouchLerp: 0.08,
+      touchInertiaExponent: 1.7,
+      duration: 1.15,
+      lerp: 0.1,
       wheelMultiplier: 1,
       touchMultiplier: 1
     });

@@ -188,6 +188,8 @@ export default function DomeGallery({
   const openingRef = useRef(false);
   const openStartedAtRef = useRef(0);
   const lastDragEndAt = useRef(0);
+  const touchDragActiveRef = useRef(false);
+  const touchAxisIntentRef = useRef<'unset' | 'pan' | 'rotate'>('unset');
 
   const scrollLockedRef = useRef(false);
   const lockScroll = useCallback(() => {
@@ -195,9 +197,9 @@ export default function DomeGallery({
     scrollLockedRef.current = true;
     document.body.classList.add('dg-scroll-lock');
   }, []);
-  const unlockScroll = useCallback(() => {
+  const unlockScroll = useCallback((force = false) => {
     if (!scrollLockedRef.current) return;
-    if (rootRef.current?.getAttribute('data-enlarging') === 'true') return;
+    if (!force && rootRef.current?.getAttribute('data-enlarging') === 'true') return;
     scrollLockedRef.current = false;
     document.body.classList.remove('dg-scroll-lock');
   }, []);
@@ -349,8 +351,10 @@ export default function DomeGallery({
 
         const evt = event as PointerEvent;
         pointerTypeRef.current = (evt.pointerType as 'mouse' | 'pen' | 'touch') || 'mouse';
-        if (pointerTypeRef.current === 'touch') evt.preventDefault();
-        if (pointerTypeRef.current === 'touch') lockScroll();
+        if (pointerTypeRef.current === 'touch') {
+          touchDragActiveRef.current = false;
+          touchAxisIntentRef.current = 'unset';
+        }
         draggingRef.current = true;
         cancelTapRef.current = false;
         movedRef.current = false;
@@ -363,10 +367,45 @@ export default function DomeGallery({
         if (focusedElRef.current || !draggingRef.current || !startPosRef.current) return;
 
         const evt = event as PointerEvent;
-        if (pointerTypeRef.current === 'touch') evt.preventDefault();
-
         const dxTotal = evt.clientX - startPosRef.current.x;
         const dyTotal = evt.clientY - startPosRef.current.y;
+        const absDx = Math.abs(dxTotal);
+        const absDy = Math.abs(dyTotal);
+
+        if (pointerTypeRef.current === 'touch') {
+          if (touchAxisIntentRef.current === 'unset') {
+            if (absDx < 6 && absDy < 6) {
+              if (last) {
+                draggingRef.current = false;
+                startPosRef.current = null;
+                touchAxisIntentRef.current = 'unset';
+              }
+              return;
+            }
+
+            if (absDy > absDx * 1.1) {
+              touchAxisIntentRef.current = 'pan';
+              movedRef.current = true;
+            } else {
+              touchAxisIntentRef.current = 'rotate';
+              touchDragActiveRef.current = true;
+              lockScroll();
+            }
+          }
+
+          if (touchAxisIntentRef.current === 'pan') {
+            if (last) {
+              draggingRef.current = false;
+              startPosRef.current = null;
+              tapTargetRef.current = null;
+              touchAxisIntentRef.current = 'unset';
+              touchDragActiveRef.current = false;
+            }
+            return;
+          }
+
+          evt.preventDefault();
+        }
 
         if (!movedRef.current) {
           const dist2 = dxTotal * dxTotal + dyTotal * dyTotal;
@@ -423,7 +462,11 @@ export default function DomeGallery({
           tapTargetRef.current = null;
 
           if (cancelTapRef.current) setTimeout(() => (cancelTapRef.current = false), 120);
-          if (pointerTypeRef.current === 'touch') unlockScroll();
+          if (pointerTypeRef.current === 'touch') {
+            if (touchDragActiveRef.current) unlockScroll();
+            touchAxisIntentRef.current = 'unset';
+            touchDragActiveRef.current = false;
+          }
           if (movedRef.current) lastDragEndAt.current = performance.now();
           movedRef.current = false;
         }
@@ -545,7 +588,7 @@ export default function DomeGallery({
                 el.style.opacity = '';
                 openingRef.current = false;
                 if (!draggingRef.current && rootRef.current?.getAttribute('data-enlarging') !== 'true') {
-                  document.body.classList.remove('dg-scroll-lock');
+                  unlockScroll(true);
                 }
               }, 300);
             });
@@ -566,7 +609,7 @@ export default function DomeGallery({
       scrim.removeEventListener('click', close);
       window.removeEventListener('keydown', onKey);
     };
-  }, [enlargeTransitionMs, openedImageBorderRadius, grayscale]);
+  }, [enlargeTransitionMs, openedImageBorderRadius, grayscale, unlockScroll]);
 
   const openItemFromElement = (el: HTMLElement) => {
     if (openingRef.current) return;
@@ -699,9 +742,9 @@ export default function DomeGallery({
 
   useEffect(() => {
     return () => {
-      document.body.classList.remove('dg-scroll-lock');
+      unlockScroll(true);
     };
-  }, []);
+  }, [unlockScroll]);
 
   const cssStyles = `
     .sphere-root {
@@ -765,13 +808,7 @@ export default function DomeGallery({
     }
 
     body.dg-scroll-lock {
-      position: fixed !important;
-      top: 0;
-      left: 0;
-      width: 100% !important;
-      height: 100% !important;
       overflow: hidden !important;
-      touch-action: none !important;
       overscroll-behavior: contain !important;
     }
 
@@ -817,7 +854,7 @@ export default function DomeGallery({
           ref={mainRef}
           className="absolute inset-0 grid select-none place-items-center overflow-hidden bg-transparent"
           style={{
-            touchAction: 'none',
+            touchAction: 'pan-y',
             WebkitUserSelect: 'none'
           }}
         >
