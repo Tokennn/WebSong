@@ -35,6 +35,7 @@ import type {
 import Grainient from '@/components/Grainient';
 import GradientText from '@/components/GradientText';
 import ShinyText from '@/components/ShinyText';
+import { supabase } from '@/lib/supabase';
 
 type Api = { fire: (options?: ConfettiOptions) => void };
 export type ConfettiRef = Api | null;
@@ -385,6 +386,7 @@ export const AuthComponent = ({
   const [authStep, setAuthStep] = useState<'email' | 'password' | 'confirmPassword'>('email');
   const [modalStatus, setModalStatus] = useState<'closed' | 'loading' | 'error' | 'success'>('closed');
   const [modalErrorMessage, setModalErrorMessage] = useState('');
+  const [modalSuccessMessage, setModalSuccessMessage] = useState('Welcome Aboard!');
   const confettiRef = useRef<ConfettiRef>(null);
 
   const isEmailValid = /\S+@\S+\.\S+/.test(email);
@@ -408,10 +410,74 @@ export const AuthComponent = ({
     fire({ ...defaults, particleCount, origin: { x: 1, y: 1 }, angle: 120 });
   };
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
+  const getAuthRedirectTo = () =>
+    typeof window === 'undefined' ? undefined : `${window.location.origin}/sign-in`;
+
+  const handleAuthError = (fallbackMessage: string, error?: unknown) => {
+    const message = error instanceof Error ? error.message : fallbackMessage;
+    setModalErrorMessage(message);
+    setModalStatus('error');
+  };
+
+  const handleOAuthSignIn = async (provider: 'google' | 'github') => {
+    if (modalStatus !== 'closed') return;
+    setModalStatus('loading');
+
+    try {
+      const redirectTo = getAuthRedirectTo();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: redirectTo ? { redirectTo } : undefined
+      });
+
+      if (error) {
+        handleAuthError(`Unable to continue with ${provider}.`, error);
+      }
+    } catch (error) {
+      handleAuthError(`Unable to continue with ${provider}.`, error);
+    }
+  };
+
+  const handleMagicLinkSignIn = async () => {
+    if (!isEmailValid) {
+      setModalErrorMessage('Enter a valid email address first.');
+      setModalStatus('error');
+      return;
+    }
+    if (modalStatus !== 'closed') return;
+
+    setModalStatus('loading');
+    try {
+      const redirectTo = getAuthRedirectTo();
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectTo,
+          shouldCreateUser: true
+        }
+      });
+
+      if (error) {
+        handleAuthError('Unable to send magic link.', error);
+        return;
+      }
+
+      setModalSuccessMessage('Magic link sent. Check your inbox.');
+      setModalStatus('success');
+    } catch (error) {
+      handleAuthError('Unable to send magic link.', error);
+    }
+  };
+
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (modalStatus !== 'closed' || authStep !== 'confirmPassword') return;
 
+    if (!isEmailValid) {
+      setModalErrorMessage('Enter a valid email address.');
+      setModalStatus('error');
+      return;
+    }
     if (password !== confirmPassword) {
       setModalErrorMessage('Passwords do not match!');
       setModalStatus('error');
@@ -419,12 +485,29 @@ export const AuthComponent = ({
     }
 
     setModalStatus('loading');
-    const loadingStepsCount = modalSteps.length - 1;
-    const totalDuration = loadingStepsCount * TEXT_LOOP_INTERVAL * 1000;
-    window.setTimeout(() => {
+    try {
+      const redirectTo = getAuthRedirectTo();
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: redirectTo ? { emailRedirectTo: redirectTo } : undefined
+      });
+
+      if (error) {
+        handleAuthError('Unable to create account.', error);
+        return;
+      }
+
       fireSideCanons();
+      setModalSuccessMessage(
+        data.session
+          ? 'Account created and connected.'
+          : 'Account created. Please confirm your email to continue.'
+      );
       setModalStatus('success');
-    }, totalDuration);
+    } catch (error) {
+      handleAuthError('Unable to create account.', error);
+    }
   };
 
   const handleProgressStep = () => {
@@ -450,6 +533,7 @@ export const AuthComponent = ({
   const closeModal = () => {
     setModalStatus('closed');
     setModalErrorMessage('');
+    setModalSuccessMessage('Welcome Aboard!');
   };
 
   useEffect(() => {
@@ -505,7 +589,7 @@ export const AuthComponent = ({
             {modalStatus === 'success' ? (
               <div className="flex flex-col items-center gap-4">
                 {modalSteps[modalSteps.length - 1].icon}
-                <p className="text-lg font-medium text-foreground">{modalSteps[modalSteps.length - 1].message}</p>
+                <p className="text-center text-lg font-medium text-foreground">{modalSuccessMessage}</p>
               </div>
             ) : null}
           </motion.div>
@@ -627,11 +711,21 @@ export const AuthComponent = ({
                 </BlurFade>
                 <BlurFade delay={0.75}>
                   <div className="flex w-full items-center justify-center gap-4">
-                    <GlassButton contentClassName="flex items-center justify-center gap-2" size="sm">
+                    <GlassButton
+                      type="button"
+                      onClick={() => void handleOAuthSignIn('google')}
+                      contentClassName="flex items-center justify-center gap-2"
+                      size="sm"
+                    >
                       <GoogleIcon />
                       <span className="font-semibold text-foreground">Google</span>
                     </GlassButton>
-                    <GlassButton contentClassName="flex items-center justify-center gap-2" size="sm">
+                    <GlassButton
+                      type="button"
+                      onClick={() => void handleOAuthSignIn('github')}
+                      contentClassName="flex items-center justify-center gap-2"
+                      size="sm"
+                    >
                       <GitHubIcon />
                       <span className="font-semibold text-foreground">GitHub</span>
                     </GlassButton>
@@ -754,6 +848,20 @@ export const AuthComponent = ({
                       </div>
                     </div>
                   </BlurFade>
+                  <AnimatePresence>
+                    {authStep === 'email' ? (
+                      <BlurFade key="magic-link" delay={0.1} className="w-full">
+                        <button
+                          type="button"
+                          onClick={() => void handleMagicLinkSignIn()}
+                          className="w-full text-center text-sm font-medium text-zinc-300 transition-colors hover:text-white disabled:cursor-not-allowed disabled:text-zinc-500"
+                          disabled={!isEmailValid}
+                        >
+                          Send me a magic link (email only)
+                        </button>
+                      </BlurFade>
+                    ) : null}
+                  </AnimatePresence>
 
                   <AnimatePresence>
                     {authStep === 'password' ? (
