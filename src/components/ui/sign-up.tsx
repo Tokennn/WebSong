@@ -425,14 +425,22 @@ export const AuthComponent = ({
 
     try {
       const redirectTo = getAuthRedirectTo();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: redirectTo ? { redirectTo } : undefined
       });
 
       if (error) {
         handleAuthError(`Unable to continue with ${provider}.`, error);
+        return;
       }
+
+      if (data?.url) {
+        window.location.assign(data.url);
+        return;
+      }
+
+      handleAuthError(`OAuth URL missing for ${provider}. Check provider configuration.`);
     } catch (error) {
       handleAuthError(`Unable to continue with ${provider}.`, error);
     }
