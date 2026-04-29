@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
@@ -246,9 +246,21 @@ export default function CommunityPage() {
     };
   }, []);
 
+  const handleSignOut = useCallback(() => {
+    void supabase.auth.signOut().finally(() => {
+      window.location.assign('/sign-in');
+    });
+  }, []);
+
   const menuItems = useMemo(
-    () => (authUser ? COMMUNITY_MENU_ITEMS.filter(item => item.link !== '/sign-in') : COMMUNITY_MENU_ITEMS),
-    [authUser]
+    () =>
+      authUser
+        ? [
+            ...COMMUNITY_MENU_ITEMS.filter(item => item.link !== '/sign-in'),
+            { label: 'Déconnexion', ariaLabel: 'Sign out', link: '/sign-in', onClick: handleSignOut }
+          ]
+        : COMMUNITY_MENU_ITEMS,
+    [authUser, handleSignOut]
   );
 
   const avatarSrc =

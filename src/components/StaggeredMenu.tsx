@@ -6,6 +6,7 @@ export interface StaggeredMenuItem {
   label: string;
   ariaLabel: string;
   link: string;
+  onClick?: () => void;
 }
 
 export interface StaggeredMenuSocialItem {
@@ -50,6 +51,23 @@ function MenuItemLink({
     'sm-panel-item relative text-black font-semibold text-[clamp(2.2rem,6vw,3.2rem)] cursor-pointer leading-none tracking-[-1px] uppercase transition-[background,color] duration-150 ease-linear inline-block no-underline pr-[1.9em]';
 
   if (item.link.startsWith('/')) {
+    if (item.onClick) {
+      return (
+        <button
+          className={baseClasses + ' border-0 bg-transparent p-0 text-left'}
+          aria-label={item.ariaLabel}
+          data-index={idx + 1}
+          onClick={() => {
+            item.onClick?.();
+            onNavigate();
+          }}
+          type="button"
+        >
+          <span className="sm-panel-itemLabel inline-block [transform-origin:50%_100%] will-change-transform">{item.label}</span>
+        </button>
+      );
+    }
+
     return (
       <Link className={baseClasses} to={item.link} aria-label={item.ariaLabel} data-index={idx + 1} onClick={onNavigate}>
         <span className="sm-panel-itemLabel inline-block [transform-origin:50%_100%] will-change-transform">{item.label}</span>
