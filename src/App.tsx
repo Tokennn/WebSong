@@ -6,6 +6,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import CommunityPage from '@/pages/CommunityPage';
 import DomeGalleryPage from '@/pages/DomeGalleryPage';
 import HomePage from '@/pages/HomePage';
+import PostAuthPage from '@/pages/PostAuthPage';
 import SignInPage from '@/pages/SignInPage';
 
 function AnimatedPage({ children }: { children: ReactNode }) {
@@ -107,6 +108,14 @@ function App() {
             element={
               <AnimatedPage>
                 <SignInPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/post-auth"
+            element={
+              <AnimatedPage>
+                <PostAuthPage />
               </AnimatedPage>
             }
           />

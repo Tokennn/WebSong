@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
 
@@ -10,6 +11,7 @@ import GradientText from '@/components/GradientText';
 import ShinyText from '@/components/ShinyText';
 import StaggeredMenu, { type StaggeredMenuItem, type StaggeredMenuSocialItem } from '@/components/StaggeredMenu';
 import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
+import { supabase } from '@/lib/supabase';
 
 const IMG_PADDING = 14;
 
@@ -220,16 +222,46 @@ function CommunityContent({ title, textA, textB, cta }: Omit<CommunitySection, '
 }
 
 export default function CommunityPage() {
+  const [authUser, setAuthUser] = useState<User | null>(null);
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!isMounted) return;
+      setAuthUser(data.session?.user ?? null);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthUser(session?.user ?? null);
+    });
+
+    return () => {
+      isMounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const menuItems = useMemo(
+    () => (authUser ? COMMUNITY_MENU_ITEMS.filter(item => item.link !== '/sign-in') : COMMUNITY_MENU_ITEMS),
+    [authUser]
+  );
+
+  const avatarSrc =
+    (authUser?.user_metadata?.avatar_url as string | undefined) ||
+    (authUser?.user_metadata?.picture as string | undefined);
+  const avatarInitial = authUser?.email?.charAt(0).toUpperCase() || 'U';
 
   return (
     <main className="bg-neutral-100 text-neutral-900">
       <StaggeredMenu
         isFixed
         position="right"
-        items={COMMUNITY_MENU_ITEMS}
+        items={menuItems}
         socialItems={COMMUNITY_SOCIAL_ITEMS}
         displaySocials={true}
         displayItemNumbering={true}
@@ -238,6 +270,10 @@ export default function CommunityPage() {
         openMenuButtonColor="#111111"
         changeMenuColorOnOpen={true}
         accentColor="#111111"
+        showAvatar={Boolean(authUser)}
+        avatarSrc={avatarSrc}
+        avatarInitial={avatarInitial}
+        avatarAlt={authUser?.email ? `Avatar ${authUser.email}` : 'User avatar'}
       />
 
       <section className="px-4 pt-20 pb-20 text-center sm:px-8">

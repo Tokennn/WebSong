@@ -32,6 +32,7 @@ import type {
   GlobalOptions as ConfettiGlobalOptions,
   Options as ConfettiOptions
 } from 'canvas-confetti';
+import { useNavigate } from 'react-router-dom';
 import Grainient from '@/components/Grainient';
 import GradientText from '@/components/GradientText';
 import ShinyText from '@/components/ShinyText';
@@ -354,6 +355,7 @@ const modalSteps = [
   { message: 'Welcome Aboard!', icon: <PartyPopper className="h-12 w-12 text-green-500" /> }
 ];
 const TEXT_LOOP_INTERVAL = 1.5;
+const POST_AUTH_PATH = '/post-auth';
 
 const DefaultLogo = () => (
   <div className="rounded-md bg-primary p-1.5 text-primary-foreground">
@@ -378,6 +380,7 @@ export const AuthComponent = ({
   communityTypography = false,
   showHeader = true
 }: AuthComponentProps) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -388,6 +391,7 @@ export const AuthComponent = ({
   const [modalErrorMessage, setModalErrorMessage] = useState('');
   const [modalSuccessMessage, setModalSuccessMessage] = useState('Welcome Aboard!');
   const confettiRef = useRef<ConfettiRef>(null);
+  const hasRedirectedAfterAuthRef = useRef(false);
 
   const isEmailValid = /\S+@\S+\.\S+/.test(email);
   const isPasswordValid = password.length >= 6;
@@ -412,6 +416,12 @@ export const AuthComponent = ({
 
   const getAuthRedirectTo = () =>
     typeof window === 'undefined' ? undefined : `${window.location.origin}/sign-in`;
+
+  const redirectAfterAuth = useCallback(() => {
+    if (hasRedirectedAfterAuthRef.current) return;
+    hasRedirectedAfterAuthRef.current = true;
+    navigate(POST_AUTH_PATH, { replace: true });
+  }, [navigate]);
 
   const handleAuthError = (fallbackMessage: string, error?: unknown) => {
     const message = error instanceof Error ? error.message : fallbackMessage;
@@ -548,6 +558,27 @@ export const AuthComponent = ({
     if (authStep === 'password') window.setTimeout(() => passwordInputRef.current?.focus(), 500);
     if (authStep === 'confirmPassword') window.setTimeout(() => confirmPasswordInputRef.current?.focus(), 500);
   }, [authStep]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!isMounted) return;
+      if (data.session) {
+        redirectAfterAuth();
+      }
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) return;
+      redirectAfterAuth();
+    });
+
+    return () => {
+      isMounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, [redirectAfterAuth]);
 
   const Modal = () => (
     <AnimatePresence>
