@@ -271,6 +271,7 @@ const SPOTIFY_TEST_ARTISTS = [
 export default function DomeGalleryPage() {
   const [scrollBlurPx, setScrollBlurPx] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [isDiscoverVisible, setIsDiscoverVisible] = useState(false);
   const blurRef = useRef(0);
   const progressRef = useRef(0);
 
@@ -317,6 +318,15 @@ export default function DomeGalleryPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setIsDiscoverVisible(prev => {
+      if (prev) {
+        return scrollProgress > 0.68;
+      }
+      return scrollProgress >= 0.8;
+    });
+  }, [scrollProgress]);
+
   const domeTranslateY = -42 * scrollProgress;
   const domeOpacity = Math.max(0, 1 - scrollProgress * 1.15);
 
@@ -324,7 +334,7 @@ export default function DomeGalleryPage() {
     <main className="relative min-h-[220vh] w-screen bg-black text-white">
       <div
         className={`fixed inset-0 z-40 flex items-center justify-center transition-all duration-500 ${
-          scrollProgress >= 0.82 ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+          isDiscoverVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
         }`}
         style={{ pointerEvents: 'none' }}
       >
