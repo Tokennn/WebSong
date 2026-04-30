@@ -5,8 +5,8 @@ import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/
 
 export default function PostAuthPage() {
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-black text-white">
-      <div className="pointer-events-none absolute top-5 right-5 z-20 sm:top-8 sm:right-8">
+    <main className="relative h-dvh w-full overflow-hidden bg-black text-white">
+      <div className="pointer-events-none absolute top-8 right-8 z-20 hidden sm:block">
         <div className="pointer-events-auto">
           <CraftButton asChild>
             <Link to="/community">
