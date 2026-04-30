@@ -81,6 +81,32 @@ const GRADIENT_PHRASES = [
   'turning scrolling into an editorial journey'
 ];
 
+function getOAuthAvatarUrl(user: User | null): string | undefined {
+  if (!user) return undefined;
+
+  const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const candidates: Array<string | undefined> = [
+    typeof metadata.avatar_url === 'string' ? metadata.avatar_url : undefined,
+    typeof metadata.picture === 'string' ? metadata.picture : undefined,
+    typeof metadata.photoURL === 'string' ? metadata.photoURL : undefined,
+    typeof metadata.profile_image_url === 'string' ? metadata.profile_image_url : undefined,
+    typeof metadata.image === 'string' ? metadata.image : undefined
+  ];
+
+  for (const identity of user.identities ?? []) {
+    const identityData = (identity.identity_data ?? {}) as Record<string, unknown>;
+    candidates.push(
+      typeof identityData.avatar_url === 'string' ? identityData.avatar_url : undefined,
+      typeof identityData.picture === 'string' ? identityData.picture : undefined,
+      typeof identityData.photoURL === 'string' ? identityData.photoURL : undefined,
+      typeof identityData.profile_image_url === 'string' ? identityData.profile_image_url : undefined,
+      typeof identityData.image === 'string' ? identityData.image : undefined
+    );
+  }
+
+  return candidates.find(value => typeof value === 'string' && value.startsWith('http'));
+}
+
 function renderGradientPhrases(text: string) {
   let remaining = text;
   const parts: ReactNode[] = [];
@@ -263,9 +289,7 @@ export default function CommunityPage() {
     [authUser, handleSignOut]
   );
 
-  const avatarSrc =
-    (authUser?.user_metadata?.avatar_url as string | undefined) ||
-    (authUser?.user_metadata?.picture as string | undefined);
+  const avatarSrc = getOAuthAvatarUrl(authUser);
   const avatarInitial = authUser?.email?.charAt(0).toUpperCase() || 'U';
 
   return (
@@ -281,6 +305,7 @@ export default function CommunityPage() {
         menuButtonColor="#111111"
         openMenuButtonColor="#111111"
         changeMenuColorOnOpen={true}
+        adaptiveMenuContrast={true}
         accentColor="#111111"
         showAvatar={Boolean(authUser)}
         avatarSrc={avatarSrc}

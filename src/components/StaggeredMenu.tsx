@@ -36,6 +36,7 @@ export interface StaggeredMenuProps {
   avatarAlt?: string;
   avatarInitial?: string;
   avatarLink?: string;
+  adaptiveMenuContrast?: boolean;
 }
 
 function MenuItemLink({
@@ -103,9 +104,12 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
   avatarSrc,
   avatarAlt = 'User avatar',
   avatarInitial = 'U',
-  avatarLink = '/post-auth'
+  avatarLink = '/post-auth',
+  adaptiveMenuContrast = false
 }: StaggeredMenuProps) => {
   const [open, setOpen] = useState(false);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [isOverDarkBackground, setIsOverDarkBackground] = useState(false);
   const openRef = useRef(false);
 
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -129,6 +133,145 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
   const busyRef = useRef(false);
 
   const itemEntranceTweenRef = useRef<gsap.core.Tween | null>(null);
+
+  const getLuminanceFromRgb = useCallback((r: number, g: number, b: number) => {
+    const normalize = (value: number) => {
+      const srgb = value / 255;
+      return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+    };
+
+    const rr = normalize(r);
+    const gg = normalize(g);
+    const bb = normalize(b);
+
+    return 0.2126 * rr + 0.7152 * gg + 0.0722 * bb;
+  }, []);
+
+  const parseCssColor = useCallback((value: string) => {
+    const match = value.match(/rgba?\(([^)]+)\)/i);
+    if (!match) return null;
+    const parts = match[1].split(',').map(part => Number(part.trim()));
+    if (parts.length < 3 || parts.slice(0, 3).some(part => Number.isNaN(part))) return null;
+    const alpha = parts.length >= 4 && !Number.isNaN(parts[3]) ? parts[3] : 1;
+    return { r: parts[0], g: parts[1], b: parts[2], a: alpha };
+  }, []);
+
+  const getNodeOwnLuminance = useCallback(
+    (node: Element, sampleX: number, sampleY: number): number | null => {
+      if (node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0 && node.naturalHeight > 0) {
+        const rect = node.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          const localX = Math.min(Math.max(sampleX - rect.left, 0), rect.width);
+          const localY = Math.min(Math.max(sampleY - rect.top, 0), rect.height);
+
+          const px = Math.floor((localX / rect.width) * (node.naturalWidth - 1));
+          const py = Math.floor((localY / rect.height) * (node.naturalHeight - 1));
+
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(node, px, py, 1, 1, 0, 0, 1, 1);
+              const pixel = ctx.getImageData(0, 0, 1, 1).data;
+              return getLuminanceFromRgb(pixel[0], pixel[1], pixel[2]);
+            }
+          } catch {
+            // Ignore cross-origin/tainted-canvas scenarios and fallback to CSS backgrounds.
+          }
+        }
+      }
+
+      const style = window.getComputedStyle(node);
+      const parsed = parseCssColor(style.backgroundColor);
+      if (parsed && parsed.a > 0) return getLuminanceFromRgb(parsed.r, parsed.g, parsed.b);
+      return null;
+    },
+    [getLuminanceFromRgb, parseCssColor]
+  );
+
+  React.useEffect(() => {
+    if (!adaptiveMenuContrast) {
+      setIsOverDarkBackground(false);
+      return;
+    }
+
+    let rafId: number | null = null;
+
+    const updateContrast = () => {
+      const btn = toggleBtnRef.current;
+      if (!btn) return;
+
+      const rect = btn.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const points: Array<[number, number]> = [
+        [rect.left + rect.width * 0.2, rect.top + rect.height * 0.5],
+        [rect.left + rect.width * 0.5, rect.top + rect.height * 0.5],
+        [rect.left + rect.width * 0.8, rect.top + rect.height * 0.5]
+      ];
+
+      let darkVotes = 0;
+      let sampled = 0;
+
+      for (const [x, y] of points) {
+        const stack = document.elementsFromPoint(x, y);
+        let luminance: number | null = null;
+
+        for (const el of stack) {
+          if (!(el instanceof HTMLElement)) continue;
+          if (btn.contains(el)) continue;
+          if (el.closest('.sm-scope')) continue;
+          if (el === document.documentElement || el === document.body || el.id === 'root') continue;
+          luminance = getNodeOwnLuminance(el, x, y);
+          if (luminance != null) break;
+        }
+
+        if (luminance == null) continue;
+
+        sampled += 1;
+        if (luminance < 0.45) darkVotes += 1;
+      }
+
+      if (sampled === 0) {
+        setIsOverDarkBackground(false);
+        return;
+      }
+      setIsOverDarkBackground(darkVotes / sampled >= 0.5);
+    };
+
+    const scheduleUpdate = () => {
+      if (rafId != null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        updateContrast();
+      });
+    };
+
+    updateContrast();
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+
+    return () => {
+      if (rafId != null) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+    };
+  }, [adaptiveMenuContrast, getNodeOwnLuminance]);
+
+  const resolveButtonColor = useCallback(
+    (opening: boolean) => {
+      if (opening) return openMenuButtonColor;
+      if (adaptiveMenuContrast && isOverDarkBackground) return '#ffffff';
+      return menuButtonColor;
+    },
+    [adaptiveMenuContrast, isOverDarkBackground, menuButtonColor, openMenuButtonColor]
+  );
+
+  React.useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [avatarSrc]);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -160,11 +303,11 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
 
       gsap.set(textInner, { yPercent: 0 });
 
-      if (toggleBtnRef.current) gsap.set(toggleBtnRef.current, { color: menuButtonColor });
+      if (toggleBtnRef.current) gsap.set(toggleBtnRef.current, { color: resolveButtonColor(openRef.current) });
     });
 
     return () => ctx.revert();
-  }, [menuButtonColor, position]);
+  }, [menuButtonColor, position, resolveButtonColor]);
 
   const buildOpenTimeline = useCallback(() => {
     const panel = panelRef.current;
@@ -337,25 +480,25 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
       if (!btn) return;
       colorTweenRef.current?.kill();
       if (changeMenuColorOnOpen) {
-        const targetColor = opening ? openMenuButtonColor : menuButtonColor;
+        const targetColor = resolveButtonColor(opening);
         colorTweenRef.current = gsap.to(btn, { color: targetColor, delay: 0.18, duration: 0.3, ease: 'power2.out' });
       } else {
-        gsap.set(btn, { color: menuButtonColor });
+        gsap.set(btn, { color: resolveButtonColor(opening) });
       }
     },
-    [openMenuButtonColor, menuButtonColor, changeMenuColorOnOpen]
+    [changeMenuColorOnOpen, resolveButtonColor]
   );
 
   React.useEffect(() => {
     if (toggleBtnRef.current) {
       if (changeMenuColorOnOpen) {
-        const targetColor = openRef.current ? openMenuButtonColor : menuButtonColor;
+        const targetColor = resolveButtonColor(openRef.current);
         gsap.set(toggleBtnRef.current, { color: targetColor });
       } else {
-        gsap.set(toggleBtnRef.current, { color: menuButtonColor });
+        gsap.set(toggleBtnRef.current, { color: resolveButtonColor(openRef.current) });
       }
     }
-  }, [changeMenuColorOnOpen, menuButtonColor, openMenuButtonColor]);
+  }, [changeMenuColorOnOpen, resolveButtonColor]);
 
   const animateText = useCallback((opening: boolean) => {
     const inner = textInnerRef.current;
@@ -490,12 +633,18 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
           </div>
 
           <div className="sm-actions pointer-events-auto flex items-center gap-3">
-            {showAvatar && avatarSrc ? (
+            {showAvatar && avatarSrc && !avatarLoadFailed ? (
               <Link to={avatarLink} aria-label={avatarAlt} className="sm-avatar">
-                <img src={avatarSrc} alt={avatarAlt} className="sm-avatar-img" />
+                <img
+                  src={avatarSrc}
+                  alt={avatarAlt}
+                  className="sm-avatar-img"
+                  referrerPolicy="no-referrer"
+                  onError={() => setAvatarLoadFailed(true)}
+                />
               </Link>
             ) : null}
-            {showAvatar && !avatarSrc && avatarInitial ? (
+            {showAvatar && (avatarLoadFailed || !avatarSrc) && avatarInitial ? (
               <Link to={avatarLink} aria-label={avatarAlt} className="sm-avatar sm-avatar-fallback">
                 <span>{avatarInitial}</span>
               </Link>
@@ -503,9 +652,7 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
 
             <button
               ref={toggleBtnRef}
-              className={`sm-toggle relative inline-flex items-center gap-[0.3rem] bg-transparent border-0 cursor-pointer font-medium leading-none overflow-visible pointer-events-auto ${
-                open ? 'text-black' : 'text-[#e9e9ef]'
-              }`}
+              className="sm-toggle relative inline-flex items-center gap-[0.3rem] bg-transparent border-0 cursor-pointer font-medium leading-none overflow-visible pointer-events-auto text-black"
               aria-label={open ? 'Close menu' : 'Open menu'}
               aria-expanded={open}
               aria-controls="staggered-menu-panel"
