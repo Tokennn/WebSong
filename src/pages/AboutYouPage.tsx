@@ -6,6 +6,7 @@ import { FiMapPin } from 'react-icons/fi';
 import { SiGithub, SiTiktok, SiX, SiYoutube } from 'react-icons/si';
 import { Link } from 'react-router-dom';
 import { twMerge } from 'tailwind-merge';
+import { Globe } from '@/components/ui/cobe-globe';
 import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
 import { supabase } from '@/lib/supabase';
 
@@ -65,6 +66,58 @@ const DEFAULT_PROFILE: AboutProfile = {
   tiktokUrl: '#',
   xUrl: '#'
 };
+
+const LOCATION_COORDS: Record<string, [number, number]> = {
+  paris: [48.8566, 2.3522],
+  london: [51.5074, -0.1278],
+  tokyo: [35.6762, 139.6503],
+  'new york': [40.7128, -74.006],
+  nyc: [40.7128, -74.006],
+  berlin: [52.52, 13.405],
+  madrid: [40.4168, -3.7038],
+  barcelona: [41.3874, 2.1686],
+  lisbon: [38.7223, -9.1393],
+  rome: [41.9028, 12.4964],
+  milan: [45.4642, 9.19],
+  amsterdam: [52.3676, 4.9041],
+  brussels: [50.8503, 4.3517],
+  montreal: [45.5017, -73.5673],
+  toronto: [43.6532, -79.3832],
+  'los angeles': [34.0522, -118.2437],
+  'san francisco': [37.7595, -122.4367],
+  sydney: [-33.8688, 151.2093],
+  singapore: [1.3521, 103.8198],
+  dubai: [25.2048, 55.2708],
+  capetown: [-33.9249, 18.4241],
+  'cape town': [-33.9249, 18.4241]
+};
+
+function parseCoordinates(value: string): [number, number] | null {
+  const match = value.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+  return [lat, lng];
+}
+
+function resolveLocationCoords(rawLabel: string): [number, number] {
+  const label = rawLabel.trim();
+  if (!label) return LOCATION_COORDS.paris;
+
+  const explicitCoords = parseCoordinates(label);
+  if (explicitCoords) return explicitCoords;
+
+  const key = label
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  return LOCATION_COORDS[key] ?? LOCATION_COORDS.paris;
+}
 
 function normalizeProfile(row: Partial<AboutProfileRow> | null | undefined, fallbackDisplayName: string): AboutProfile {
   if (!row) {
@@ -306,12 +359,12 @@ function AboutBlock({
 
 function LocationBlock({
   profile,
-  mapSrc,
+  marker,
   onFieldChange,
   disabled
 }: {
   profile: AboutProfile;
-  mapSrc: string;
+  marker: { id: string; location: [number, number]; label: string };
   onFieldChange: (key: keyof AboutProfile, value: string) => void;
   disabled: boolean;
 }) {
@@ -326,15 +379,27 @@ function LocationBlock({
         onChange={value => onFieldChange('locationLabel', value)}
         disabled={disabled}
         className="text-lg text-zinc-300"
+        placeholder="Paris ou 48.8566, 2.3522"
       />
-      <div className="overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900">
-        <iframe
-          title={`Map for ${profile.locationLabel || 'location'}`}
-          src={mapSrc}
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          className="h-64 w-full border-0"
+      <div className="overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 p-4">
+        <Globe
+          className="mx-auto w-full max-w-[320px]"
+          markers={[marker]}
+          markerColor={[0.2, 0.6, 1]}
+          baseColor={[0.2, 0.23, 0.33]}
+          arcColor={[0.4, 0.7, 1]}
+          glowColor={[0.5, 0.6, 0.8]}
+          dark={1}
+          mapBrightness={4}
+          markerSize={0.11}
+          markerElevation={0.02}
+          speed={0.0025}
+          theta={0.25}
+          diffuse={1.4}
         />
+        <p className="mt-3 text-center text-xs text-zinc-400">
+          Position: {marker.location[0].toFixed(4)}, {marker.location[1].toFixed(4)}
+        </p>
       </div>
     </Block>
   );
@@ -364,9 +429,13 @@ export default function AboutYouPage() {
     return '';
   }, [dbReady, saveState, user]);
 
-  const locationMapSrc = useMemo(() => {
-    const query = encodeURIComponent(profile.locationLabel || 'Paris');
-    return `https://maps.google.com/maps?q=${query}&z=13&output=embed`;
+  const locationMarker = useMemo(() => {
+    const label = profile.locationLabel.trim() || 'Paris';
+    return {
+      id: 'profile-location',
+      label,
+      location: resolveLocationCoords(label)
+    };
   }, [profile.locationLabel]);
 
   useEffect(() => {
@@ -544,7 +613,7 @@ export default function AboutYouPage() {
         <AboutBlock profile={profile} onFieldChange={onFieldChange} disabled={!canPersist || loadingProfile} />
         <LocationBlock
           profile={profile}
-          mapSrc={locationMapSrc}
+          marker={locationMarker}
           onFieldChange={onFieldChange}
           disabled={!canPersist || loadingProfile}
         />
