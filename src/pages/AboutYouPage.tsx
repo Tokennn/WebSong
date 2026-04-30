@@ -49,14 +49,18 @@ type AboutProfileRow = {
   x_url: string;
 };
 
+const LEGACY_DEFAULT_HEADLINE = 'I build cool websites like this one.';
+const LEGACY_DEFAULT_ABOUT_INTRO = 'My passion is building cool stuff.';
+const LEGACY_DEFAULT_ABOUT_BODY =
+  "I build primarily with React, Tailwind CSS, and Framer Motion. I love this stack so much that I even built a website about it. I've made over a hundred videos on the subject across YouTube and TikTok.";
+
 const DEFAULT_PROFILE: AboutProfile = {
   displayName: 'Tom',
-  headline: 'I build cool websites like this one.',
+  headline: 'Who you are ?',
   contactLabel: 'Contact me',
   contactUrl: '#',
-  aboutIntro: 'My passion is building cool stuff.',
-  aboutBody:
-    "I build primarily with React, Tailwind CSS, and Framer Motion. I love this stack so much that I even built a website about it. I've made over a hundred videos on the subject across YouTube and TikTok.",
+  aboutIntro: 'Describe You !',
+  aboutBody: '',
   locationLabel: 'put your location here',
   mailingTitle: 'Join my mailing list',
   mailingCta: 'Join the list',
@@ -146,11 +150,11 @@ function normalizeProfile(row: Partial<AboutProfileRow> | null | undefined, fall
 
   return {
     displayName: row.display_name || fallbackDisplayName || DEFAULT_PROFILE.displayName,
-    headline: row.headline || DEFAULT_PROFILE.headline,
+    headline: !row.headline || row.headline === LEGACY_DEFAULT_HEADLINE ? DEFAULT_PROFILE.headline : row.headline,
     contactLabel: row.contact_label || DEFAULT_PROFILE.contactLabel,
     contactUrl: row.contact_url || DEFAULT_PROFILE.contactUrl,
-    aboutIntro: row.about_intro || DEFAULT_PROFILE.aboutIntro,
-    aboutBody: row.about_body || DEFAULT_PROFILE.aboutBody,
+    aboutIntro: !row.about_intro || row.about_intro === LEGACY_DEFAULT_ABOUT_INTRO ? DEFAULT_PROFILE.aboutIntro : row.about_intro,
+    aboutBody: !row.about_body || row.about_body === LEGACY_DEFAULT_ABOUT_BODY ? DEFAULT_PROFILE.aboutBody : row.about_body,
     locationLabel: row.location_label || DEFAULT_PROFILE.locationLabel,
     mailingTitle: row.mailing_title || DEFAULT_PROFILE.mailingTitle,
     mailingCta: row.mailing_cta || DEFAULT_PROFILE.mailingCta,
@@ -347,7 +351,7 @@ function SocialLinkCard({
         disabled={disabled}
         aria-label={hasLink ? `Ouvrir le lien ${label}` : `Ajouter le lien ${label}`}
         className={twMerge(
-          'grid h-full w-full min-h-[170px] place-content-center rounded-lg text-3xl transition-transform duration-200',
+          'grid h-full w-full min-h-[170px] place-content-center rounded-lg text-5xl transition-transform duration-200',
           'disabled:cursor-not-allowed disabled:opacity-65',
           iconClassName
         )}
