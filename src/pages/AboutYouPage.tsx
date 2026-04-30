@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react
 import type { User } from '@supabase/supabase-js';
 import { motion } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
-import { FiArrowRight, FiMail, FiMapPin } from 'react-icons/fi';
+import { FiMapPin } from 'react-icons/fi';
 import { SiGithub, SiTiktok, SiX, SiYoutube } from 'react-icons/si';
 import { Link } from 'react-router-dom';
 import { twMerge } from 'tailwind-merge';
@@ -245,15 +245,6 @@ function HeaderBlock({
           rows={2}
         />
       </div>
-      <a href={profile.contactUrl || '#'} className="flex items-center gap-1 text-red-300 hover:underline">
-        <InlineInput
-          value={profile.contactLabel}
-          onChange={value => onFieldChange('contactLabel', value)}
-          disabled={disabled}
-          className="w-[12ch] text-red-300"
-        />
-        <FiArrowRight />
-      </a>
     </Block>
   );
 }
@@ -315,62 +306,36 @@ function AboutBlock({
 
 function LocationBlock({
   profile,
+  mapSrc,
   onFieldChange,
   disabled
 }: {
   profile: AboutProfile;
+  mapSrc: string;
   onFieldChange: (key: keyof AboutProfile, value: string) => void;
   disabled: boolean;
 }) {
   return (
-    <Block className="col-span-12 flex flex-col items-center gap-4 md:col-span-3">
-      <FiMapPin className="text-3xl" />
+    <Block className="col-span-12 flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <FiMapPin className="text-2xl" />
+        <span className="text-sm font-medium text-zinc-400 uppercase tracking-wide">Location</span>
+      </div>
       <InlineInput
         value={profile.locationLabel}
         onChange={value => onFieldChange('locationLabel', value)}
         disabled={disabled}
-        className="text-center text-lg text-zinc-400"
+        className="text-lg text-zinc-300"
       />
-    </Block>
-  );
-}
-
-function EmailListBlock({
-  profile,
-  onFieldChange,
-  disabled
-}: {
-  profile: AboutProfile;
-  onFieldChange: (key: keyof AboutProfile, value: string) => void;
-  disabled: boolean;
-}) {
-  return (
-    <Block className="col-span-12 md:col-span-9">
-      <InlineInput
-        value={profile.mailingTitle}
-        onChange={value => onFieldChange('mailingTitle', value)}
-        disabled={disabled}
-        className="mb-3 text-lg"
-      />
-      <InlineInput
-        value={profile.mailingCta}
-        onChange={value => onFieldChange('mailingCta', value)}
-        disabled={disabled}
-        className="mb-3 text-sm text-zinc-400"
-      />
-      <form onSubmit={event => event.preventDefault()} className="flex items-center gap-2">
-        <input
-          type="email"
-          placeholder="Enter your email"
-          className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 transition-colors focus:border-red-300 focus:outline-0"
+      <div className="overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900">
+        <iframe
+          title={`Map for ${profile.locationLabel || 'location'}`}
+          src={mapSrc}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          className="h-64 w-full border-0"
         />
-        <button
-          type="submit"
-          className="flex items-center gap-2 whitespace-nowrap rounded bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-300"
-        >
-          <FiMail /> {profile.mailingCta}
-        </button>
-      </form>
+      </div>
     </Block>
   );
 }
@@ -396,8 +361,13 @@ export default function AboutYouPage() {
     if (saveState === 'saving') return 'Sauvegarde...';
     if (saveState === 'saved') return 'Sauvegardé';
     if (saveState === 'error') return 'Erreur de sauvegarde';
-    return 'Personnalisation active';
+    return '';
   }, [dbReady, saveState, user]);
+
+  const locationMapSrc = useMemo(() => {
+    const query = encodeURIComponent(profile.locationLabel || 'Paris');
+    return `https://maps.google.com/maps?q=${query}&z=13&output=embed`;
+  }, [profile.locationLabel]);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -572,14 +542,20 @@ export default function AboutYouPage() {
         <HeaderBlock profile={profile} onFieldChange={onFieldChange} disabled={!canPersist || loadingProfile} />
         <SocialsBlock profile={profile} />
         <AboutBlock profile={profile} onFieldChange={onFieldChange} disabled={!canPersist || loadingProfile} />
-        <LocationBlock profile={profile} onFieldChange={onFieldChange} disabled={!canPersist || loadingProfile} />
-        <EmailListBlock profile={profile} onFieldChange={onFieldChange} disabled={!canPersist || loadingProfile} />
+        <LocationBlock
+          profile={profile}
+          mapSrc={locationMapSrc}
+          onFieldChange={onFieldChange}
+          disabled={!canPersist || loadingProfile}
+        />
       </motion.div>
 
-      <div className="mx-auto mt-4 flex max-w-4xl items-center justify-between gap-2 text-xs text-zinc-400">
-        <span>{saveStateLabel}</span>
-        {infoMessage ? <span className="text-amber-300">{infoMessage}</span> : null}
-      </div>
+      {saveStateLabel || infoMessage ? (
+        <div className="mx-auto mt-4 flex max-w-4xl items-center justify-between gap-2 text-xs text-zinc-400">
+          <span>{saveStateLabel}</span>
+          {infoMessage ? <span className="text-amber-300">{infoMessage}</span> : null}
+        </div>
+      ) : null}
 
       <div className="mt-12 flex justify-center">
         <CraftButton asChild size="lg" className="h-auto rounded-xl px-8 py-4 text-lg">
