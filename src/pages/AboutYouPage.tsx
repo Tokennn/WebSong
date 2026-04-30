@@ -321,14 +321,14 @@ function SocialLinkCard({
 }) {
   return (
     <Block whileHover={{ rotate: '2.5deg', scale: 1.04 }} className={twMerge('col-span-6 p-0 md:col-span-3', className)}>
-      <a
-        href={href || '#'}
-        target="_blank"
-        rel="noreferrer"
+      <button
+        type="button"
+        onClick={onOpenEditor}
+        disabled={disabled}
         className={twMerge('grid h-[64%] min-h-[120px] place-content-center text-3xl', iconClassName)}
       >
         {icon}
-      </a>
+      </button>
       <button
         type="button"
         onClick={onOpenEditor}
