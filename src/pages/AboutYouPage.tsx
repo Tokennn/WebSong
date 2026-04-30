@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { motion } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
 import { FiMapPin } from 'react-icons/fi';
-import { SiGithub, SiTiktok, SiX, SiYoutube } from 'react-icons/si';
+import { SiGithub, SiInstagram, SiTiktok, SiX } from 'react-icons/si';
 import { Link } from 'react-router-dom';
 import { twMerge } from 'tailwind-merge';
 import { Globe } from '@/components/ui/cobe-globe';
@@ -305,9 +305,12 @@ function HeaderBlock({
 function SocialsBlock({ profile }: { profile: AboutProfile }) {
   return (
     <>
-      <Block whileHover={{ rotate: '2.5deg', scale: 1.1 }} className="col-span-6 bg-red-500 md:col-span-3">
+      <Block
+        whileHover={{ rotate: '2.5deg', scale: 1.1 }}
+        className="col-span-6 bg-gradient-to-br from-fuchsia-600 via-violet-600 to-indigo-600 md:col-span-3"
+      >
         <a href={profile.youtubeUrl || '#'} className="grid h-full place-content-center text-3xl text-white">
-          <SiYoutube />
+          <SiInstagram />
         </a>
       </Block>
       <Block whileHover={{ rotate: '-2.5deg', scale: 1.1 }} className="col-span-6 bg-green-600 md:col-span-3">
