@@ -585,7 +585,7 @@ function LocationBlock({
         value={profile.locationLabel}
         onChange={value => onFieldChange('locationLabel', value)}
         disabled={disabled}
-        className="text-lg text-zinc-700"
+        className="text-lg text-zinc-300"
         placeholder="Paris ou 48.8566, 2.3522"
       />
       <div className="overflow-hidden rounded-lg border border-zinc-300 bg-white p-4">
@@ -808,7 +808,7 @@ export default function AboutYouPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-12 text-zinc-900">
+    <div className="min-h-screen bg-zinc-900 px-4 py-12 text-zinc-50">
       <div className="pointer-events-none fixed top-4 right-4 z-20 sm:top-8 sm:right-8">
         <div className="pointer-events-auto">
           <CraftButton asChild>
@@ -842,9 +842,9 @@ export default function AboutYouPage() {
       </motion.div>
 
       {saveStateLabel || infoMessage ? (
-        <div className="mx-auto mt-4 flex max-w-4xl items-center justify-between gap-2 text-xs text-zinc-600">
+        <div className="mx-auto mt-4 flex max-w-4xl items-center justify-between gap-2 text-xs text-zinc-400">
           <span>{saveStateLabel}</span>
-          {infoMessage ? <span className="text-amber-700">{infoMessage}</span> : null}
+          {infoMessage ? <span className="text-amber-300">{infoMessage}</span> : null}
         </div>
       ) : null}
 
