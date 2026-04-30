@@ -57,7 +57,7 @@ const DEFAULT_PROFILE: AboutProfile = {
   aboutIntro: 'My passion is building cool stuff.',
   aboutBody:
     "I build primarily with React, Tailwind CSS, and Framer Motion. I love this stack so much that I even built a website about it. I've made over a hundred videos on the subject across YouTube and TikTok.",
-  locationLabel: 'Cyberspace',
+  locationLabel: 'put your location here',
   mailingTitle: 'Join my mailing list',
   mailingCta: 'Join the list',
   avatarUrl: 'https://api.dicebear.com/8.x/lorelei-neutral/svg?seed=John',
@@ -813,7 +813,7 @@ export default function AboutYouPage() {
         <div className="pointer-events-auto">
           <CraftButton asChild>
             <Link to="/post-auth">
-              <CraftButtonLabel>Go to robot</CraftButtonLabel>
+              <CraftButtonLabel>Your Songs</CraftButtonLabel>
               <CraftButtonIcon>↗</CraftButtonIcon>
             </Link>
           </CraftButton>
