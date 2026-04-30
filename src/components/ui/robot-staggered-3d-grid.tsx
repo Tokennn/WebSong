@@ -1,21 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const DEFAULT_IMAGES = [
-  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
-  'https://images.unsplash.com/photo-1504198266287-1659872e6590?w=800',
-  'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?w=800',
-  'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800',
-  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800',
-  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800',
-  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800',
-  'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=800',
-  'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800',
-  'https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=800'
+  'https://image-cdn-ak.spotifycdn.com/image/ab67616100005174cdc193d2ec8287a4917417ba',
+  'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174371632043a8c12bb7eeeaf9d',
+  'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174ac57c28c714286830e389df9',
+  'https://i.scdn.co/image/e3e634272efd0251c2b8298b25fcd4b659993178',
+  'https://image-cdn-fa.spotifycdn.com/image/ab676161000051745c9383166226bbe48213b064',
+  'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c3dc5429b676b16d451e5f77',
+  'https://image-cdn-fa.spotifycdn.com/image/ab676161000051742dc7b3180bad1885c6ee1320',
+  'https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e024fa5066ce33a65adda043982',
+  'https://image-cdn-fa.spotifycdn.com/image/ab676161000051749f6f7c2d12975d2a4b3a0fd8',
+  'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b3000529ef8325f73141d908',
+  'https://image-cdn-ak.spotifycdn.com/image/ab6761610000517438df3e7ad0a284eec89ffb33',
+  'https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02b0af6c9d26487cf55ba0efd6',
+  'https://image-cdn-ak.spotifycdn.com/image/ab67616100005174e3ac5eb948e78d9285d1dbdb',
+  'https://image-cdn-ak.spotifycdn.com/image/ab676161000051743c9e8c67b087ba0cb5923b78',
+  'https://image-cdn-ak.spotifycdn.com/image/ab676161000051743f02c2ff7ea1aa208e015f57',
+  'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d5233fdc8cad84de5b366f1b',
+  'https://i.scdn.co/image/9e428b0f0a17c0d9ff108340f6f304919af7c435',
+  'https://image-cdn-fa.spotifycdn.com/image/ab67616100005174a998bc86f87b9fe7e2466110',
+  'https://image-cdn-fa.spotifycdn.com/image/ab676161000051743cb51ac0d2a735316c536315',
+  'https://image-cdn-ak.spotifycdn.com/image/ab67616100005174487b00fa17362b8eab3b16c8'
 ];
 
 const FIRST_GRID_INDICES = [
-  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
-  14, 15, 16, 17, 18, 19, 20, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
 ];
 
 const SCROLL_MARQUEE_TEXT =

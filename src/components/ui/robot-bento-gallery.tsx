@@ -170,7 +170,9 @@ export function RobotBentoGallery() {
           gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
           gridTemplateRows: `repeat(${gridRows}, minmax(160px, 29vh))`,
           gap: `${gap}px`,
-          padding: `${gap}px`
+          padding: `${gap}px`,
+          position: 'relative',
+          zIndex: 2
         }}
       >
         {layout.map((cell, idx) => {
@@ -244,4 +246,3 @@ export function RobotBentoGallery() {
     </div>
   );
 }
-

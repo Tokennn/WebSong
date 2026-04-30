@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 
 import { SplineSceneBasic } from '@/components/ui/spline-scene-basic';
-import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
 import { RobotBentoGallery } from '@/components/ui/robot-bento-gallery';
+import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
 import { RobotStaggered3DGrid } from '@/components/ui/robot-staggered-3d-grid';
 
 export default function PostAuthPage() {
