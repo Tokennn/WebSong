@@ -304,7 +304,6 @@ function HeaderBlock({
 
 function SocialLinkCard({
   label,
-  href,
   onOpenEditor,
   disabled,
   icon,
@@ -312,7 +311,6 @@ function SocialLinkCard({
   iconClassName
 }: {
   label: string;
-  href: string;
   onOpenEditor: () => void;
   disabled: boolean;
   icon: ReactNode;
@@ -325,21 +323,14 @@ function SocialLinkCard({
         type="button"
         onClick={onOpenEditor}
         disabled={disabled}
-        className={twMerge('grid h-[64%] min-h-[120px] place-content-center text-3xl', iconClassName)}
-      >
-        {icon}
-      </button>
-      <button
-        type="button"
-        onClick={onOpenEditor}
-        disabled={disabled}
+        aria-label={`Éditer le lien ${label}`}
         className={twMerge(
-          'flex h-[36%] w-full flex-col items-start justify-center gap-1 border-t border-black/15 bg-black/15 px-3 py-2 text-left',
-          'disabled:cursor-not-allowed disabled:opacity-65'
+          'grid h-full w-full min-h-[170px] place-content-center rounded-lg text-3xl transition-transform duration-200',
+          'disabled:cursor-not-allowed disabled:opacity-65',
+          iconClassName
         )}
       >
-        <span className="text-[10px] font-semibold tracking-[0.14em] text-white/80 uppercase">{label}</span>
-        <span className="block w-full truncate text-xs text-white/90">{href || 'Ajouter un lien'}</span>
+        {icon}
       </button>
     </Block>
   );
@@ -437,7 +428,6 @@ function SocialsBlock({
         <SocialLinkCard
           key={config.key}
           label={config.title}
-          href={profile[config.key]}
           onOpenEditor={() =>
             setEditor({
               key: config.key,
