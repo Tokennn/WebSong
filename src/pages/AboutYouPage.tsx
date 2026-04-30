@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
 import { FiMapPin } from 'react-icons/fi';
 import { SiGithub, SiInstagram, SiTiktok, SiX } from 'react-icons/si';
@@ -302,32 +302,202 @@ function HeaderBlock({
   );
 }
 
-function SocialsBlock({ profile }: { profile: AboutProfile }) {
+function SocialLinkCard({
+  label,
+  href,
+  onOpenEditor,
+  disabled,
+  icon,
+  className,
+  iconClassName
+}: {
+  label: string;
+  href: string;
+  onOpenEditor: () => void;
+  disabled: boolean;
+  icon: ReactNode;
+  className: string;
+  iconClassName: string;
+}) {
+  return (
+    <Block whileHover={{ rotate: '2.5deg', scale: 1.04 }} className={twMerge('col-span-6 p-0 md:col-span-3', className)}>
+      <a
+        href={href || '#'}
+        target="_blank"
+        rel="noreferrer"
+        className={twMerge('grid h-[64%] min-h-[120px] place-content-center text-3xl', iconClassName)}
+      >
+        {icon}
+      </a>
+      <button
+        type="button"
+        onClick={onOpenEditor}
+        disabled={disabled}
+        className={twMerge(
+          'flex h-[36%] w-full flex-col items-start justify-center gap-1 border-t border-black/15 bg-black/15 px-3 py-2 text-left',
+          'disabled:cursor-not-allowed disabled:opacity-65'
+        )}
+      >
+        <span className="text-[10px] font-semibold tracking-[0.14em] text-white/80 uppercase">{label}</span>
+        <span className="block w-full truncate text-xs text-white/90">{href || 'Ajouter un lien'}</span>
+      </button>
+    </Block>
+  );
+}
+
+type SocialEditorState = {
+  key: keyof AboutProfile;
+  title: string;
+  placeholder: string;
+  value: string;
+  initialValue: string;
+  icon: ReactNode;
+  className: string;
+  iconClassName: string;
+};
+
+type SocialLinkConfig = {
+  key: keyof AboutProfile;
+  title: string;
+  placeholder: string;
+  icon: ReactNode;
+  className: string;
+  iconClassName: string;
+};
+
+function SocialsBlock({
+  profile,
+  onFieldChange,
+  disabled
+}: {
+  profile: AboutProfile;
+  onFieldChange: (key: keyof AboutProfile, value: string) => void;
+  disabled: boolean;
+}) {
+  const [editor, setEditor] = useState<SocialEditorState | null>(null);
+  const editorInputRef = useRef<HTMLInputElement | null>(null);
+
+  const socialConfigs: SocialLinkConfig[] = [
+    {
+      key: 'youtubeUrl',
+      title: 'Instagram',
+      placeholder: 'https://instagram.com/...',
+      className: 'bg-gradient-to-br from-fuchsia-600 via-violet-600 to-indigo-600',
+      iconClassName: 'text-white',
+      icon: <SiInstagram />
+    },
+    {
+      key: 'githubUrl',
+      title: 'GitHub',
+      placeholder: 'https://github.com/...',
+      className: 'bg-green-600',
+      iconClassName: 'text-white',
+      icon: <SiGithub />
+    },
+    {
+      key: 'tiktokUrl',
+      title: 'TikTok',
+      placeholder: 'https://tiktok.com/@...',
+      className: 'bg-zinc-50',
+      iconClassName: 'text-black',
+      icon: <SiTiktok />
+    },
+    {
+      key: 'xUrl',
+      title: 'X',
+      placeholder: 'https://x.com/...',
+      className: 'bg-blue-500',
+      iconClassName: 'text-white',
+      icon: <SiX />
+    }
+  ];
+
+  const closeEditorWithSave = () => {
+    if (!editor) return;
+    const nextValue = editor.value.trim();
+    if (!disabled && nextValue !== editor.initialValue) {
+      onFieldChange(editor.key, nextValue);
+    }
+    setEditor(null);
+  };
+
+  useEffect(() => {
+    if (!editor) return;
+    const id = window.setTimeout(() => {
+      editorInputRef.current?.focus();
+      editorInputRef.current?.select();
+    }, 80);
+
+    return () => window.clearTimeout(id);
+  }, [editor]);
+
   return (
     <>
-      <Block
-        whileHover={{ rotate: '2.5deg', scale: 1.1 }}
-        className="col-span-6 bg-gradient-to-br from-fuchsia-600 via-violet-600 to-indigo-600 md:col-span-3"
-      >
-        <a href={profile.youtubeUrl || '#'} className="grid h-full place-content-center text-3xl text-white">
-          <SiInstagram />
-        </a>
-      </Block>
-      <Block whileHover={{ rotate: '-2.5deg', scale: 1.1 }} className="col-span-6 bg-green-600 md:col-span-3">
-        <a href={profile.githubUrl || '#'} className="grid h-full place-content-center text-3xl text-white">
-          <SiGithub />
-        </a>
-      </Block>
-      <Block whileHover={{ rotate: '-2.5deg', scale: 1.1 }} className="col-span-6 bg-zinc-50 md:col-span-3">
-        <a href={profile.tiktokUrl || '#'} className="grid h-full place-content-center text-3xl text-black">
-          <SiTiktok />
-        </a>
-      </Block>
-      <Block whileHover={{ rotate: '2.5deg', scale: 1.1 }} className="col-span-6 bg-blue-500 md:col-span-3">
-        <a href={profile.xUrl || '#'} className="grid h-full place-content-center text-3xl text-white">
-          <SiX />
-        </a>
-      </Block>
+      {socialConfigs.map(config => (
+        <SocialLinkCard
+          key={config.key}
+          label={config.title}
+          href={profile[config.key]}
+          onOpenEditor={() =>
+            setEditor({
+              key: config.key,
+              title: config.title,
+              placeholder: config.placeholder,
+              value: profile[config.key],
+              initialValue: profile[config.key],
+              icon: config.icon,
+              className: config.className,
+              iconClassName: config.iconClassName
+            })
+          }
+          disabled={disabled}
+          className={config.className}
+          iconClassName={config.iconClassName}
+          icon={config.icon}
+        />
+      ))}
+
+      <AnimatePresence>
+        {editor ? (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeEditorWithSave}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 20 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+              className="w-full max-w-md rounded-2xl border border-white/15 bg-zinc-900 p-4 shadow-2xl"
+              onClick={event => event.stopPropagation()}
+            >
+              <div className={twMerge('mb-4 overflow-hidden rounded-xl', editor.className)}>
+                <div className={twMerge('grid h-36 place-content-center text-5xl', editor.iconClassName)}>{editor.icon}</div>
+              </div>
+
+              <p className="mb-2 text-xs tracking-[0.14em] text-zinc-400 uppercase">{editor.title}</p>
+              <input
+                ref={editorInputRef}
+                value={editor.value}
+                onChange={event => setEditor(current => (current ? { ...current, value: event.target.value } : current))}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    closeEditorWithSave();
+                  }
+                }}
+                placeholder={editor.placeholder}
+                disabled={disabled}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none ring-violet-500 transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <p className="mt-2 text-[11px] text-zinc-500">Entrée ou clic hors popup pour appliquer automatiquement.</p>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }
@@ -612,7 +782,11 @@ export default function AboutYouPage() {
         className="mx-auto grid max-w-4xl grid-flow-dense grid-cols-12 gap-4"
       >
         <HeaderBlock profile={profile} onFieldChange={onFieldChange} disabled={!canPersist || loadingProfile} />
-        <SocialsBlock profile={profile} />
+        <SocialsBlock
+          profile={profile}
+          onFieldChange={onFieldChange}
+          disabled={!canPersist || loadingProfile}
+        />
         <AboutBlock profile={profile} onFieldChange={onFieldChange} disabled={!canPersist || loadingProfile} />
         <LocationBlock
           profile={profile}
