@@ -143,7 +143,7 @@ export function LandingHero() {
           initial={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.25, ease: "easeOut", delay: 0.5 }}
         >
-          with a growing library of ready-to-use react components & microinteractions. free & open source.
+          Showcase your artists, albums, or all kinds of music to people all over the world !
         </motion.p>
 
         <div className="mt-8 flex flex-row items-center justify-center space-x-3 text-xs sm:mt-12 md:mt-16">
