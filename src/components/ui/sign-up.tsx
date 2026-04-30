@@ -355,7 +355,7 @@ const modalSteps = [
   { message: 'Welcome Aboard!', icon: <PartyPopper className="h-12 w-12 text-green-500" /> }
 ];
 const TEXT_LOOP_INTERVAL = 1.5;
-const POST_AUTH_PATH = '/post-auth';
+const POST_AUTH_PATH = '/about-you';
 
 const DefaultLogo = () => (
   <div className="rounded-md bg-primary p-1.5 text-primary-foreground">

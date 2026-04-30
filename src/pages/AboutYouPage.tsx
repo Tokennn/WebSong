@@ -119,6 +119,26 @@ function resolveLocationCoords(rawLabel: string): [number, number] {
   return LOCATION_COORDS[key] ?? LOCATION_COORDS.paris;
 }
 
+function isUnsetSocialLink(value: string): boolean {
+  const normalized = value.trim();
+  return normalized.length === 0 || normalized === '#';
+}
+
+function normalizeExternalUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (isUnsetSocialLink(trimmed)) return null;
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed.replace(/^\/+/, '')}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeProfile(row: Partial<AboutProfileRow> | null | undefined, fallbackDisplayName: string): AboutProfile {
   if (!row) {
     return { ...DEFAULT_PROFILE, displayName: fallbackDisplayName || DEFAULT_PROFILE.displayName };
@@ -304,26 +324,28 @@ function HeaderBlock({
 
 function SocialLinkCard({
   label,
-  onOpenEditor,
+  onActivate,
   disabled,
   icon,
   className,
-  iconClassName
+  iconClassName,
+  hasLink
 }: {
   label: string;
-  onOpenEditor: () => void;
+  onActivate: () => void;
   disabled: boolean;
   icon: ReactNode;
   className: string;
   iconClassName: string;
+  hasLink: boolean;
 }) {
   return (
     <Block whileHover={{ rotate: '2.5deg', scale: 1.04 }} className={twMerge('col-span-6 p-0 md:col-span-3', className)}>
       <button
         type="button"
-        onClick={onOpenEditor}
+        onClick={onActivate}
         disabled={disabled}
-        aria-label={`Éditer le lien ${label}`}
+        aria-label={hasLink ? `Ouvrir le lien ${label}` : `Ajouter le lien ${label}`}
         className={twMerge(
           'grid h-full w-full min-h-[170px] place-content-center rounded-lg text-3xl transition-transform duration-200',
           'disabled:cursor-not-allowed disabled:opacity-65',
@@ -403,13 +425,44 @@ function SocialsBlock({
     }
   ];
 
+  const openEditor = (config: SocialLinkConfig) => {
+    setEditor({
+      key: config.key,
+      title: config.title,
+      placeholder: config.placeholder,
+      value: profile[config.key],
+      initialValue: profile[config.key],
+      icon: config.icon,
+      className: config.className,
+      iconClassName: config.iconClassName
+    });
+  };
+
   const closeEditorWithSave = () => {
     if (!editor) return;
-    const nextValue = editor.value.trim();
-    if (!disabled && nextValue !== editor.initialValue) {
-      onFieldChange(editor.key, nextValue);
+    const normalizedUrl = normalizeExternalUrl(editor.value);
+    if (!normalizedUrl) {
+      setEditor(null);
+      return;
+    }
+
+    if (!disabled && normalizedUrl !== editor.initialValue) {
+      onFieldChange(editor.key, normalizedUrl);
     }
     setEditor(null);
+  };
+
+  const handleCardActivate = (config: SocialLinkConfig) => {
+    if (disabled) return;
+    const currentValue = profile[config.key];
+    const normalizedUrl = normalizeExternalUrl(currentValue);
+
+    if (!normalizedUrl) {
+      openEditor(config);
+      return;
+    }
+
+    window.location.assign(normalizedUrl);
   };
 
   useEffect(() => {
@@ -428,22 +481,12 @@ function SocialsBlock({
         <SocialLinkCard
           key={config.key}
           label={config.title}
-          onOpenEditor={() =>
-            setEditor({
-              key: config.key,
-              title: config.title,
-              placeholder: config.placeholder,
-              value: profile[config.key],
-              initialValue: profile[config.key],
-              icon: config.icon,
-              className: config.className,
-              iconClassName: config.iconClassName
-            })
-          }
+          onActivate={() => handleCardActivate(config)}
           disabled={disabled}
           className={config.className}
           iconClassName={config.iconClassName}
           icon={config.icon}
+          hasLink={Boolean(normalizeExternalUrl(profile[config.key]))}
         />
       ))}
 
@@ -473,6 +516,7 @@ function SocialsBlock({
                 ref={editorInputRef}
                 value={editor.value}
                 onChange={event => setEditor(current => (current ? { ...current, value: event.target.value } : current))}
+                onBlur={closeEditorWithSave}
                 onKeyDown={event => {
                   if (event.key === 'Enter') {
                     event.preventDefault();
@@ -483,7 +527,7 @@ function SocialsBlock({
                 disabled={disabled}
                 className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none ring-violet-500 transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
               />
-              <p className="mt-2 text-[11px] text-zinc-500">Entrée ou clic hors popup pour appliquer automatiquement.</p>
+              <p className="mt-2 text-[11px] text-zinc-500">Entrée ou clic hors popup pour appliquer (ajout unique).</p>
             </motion.div>
           </motion.div>
         ) : null}
@@ -541,26 +585,26 @@ function LocationBlock({
         value={profile.locationLabel}
         onChange={value => onFieldChange('locationLabel', value)}
         disabled={disabled}
-        className="text-lg text-zinc-300"
+        className="text-lg text-zinc-700"
         placeholder="Paris ou 48.8566, 2.3522"
       />
-      <div className="overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 p-4">
+      <div className="overflow-hidden rounded-lg border border-zinc-300 bg-white p-4">
         <Globe
-          className="mx-auto w-full max-w-[320px]"
+          className="mx-auto w-full max-w-[320px] rounded-full border-2 border-black bg-white p-1"
           markers={[marker]}
-          markerColor={[0.2, 0.6, 1]}
-          baseColor={[0.2, 0.23, 0.33]}
-          arcColor={[0.4, 0.7, 1]}
-          glowColor={[0.5, 0.6, 0.8]}
-          dark={1}
-          mapBrightness={4}
+          markerColor={[0.08, 0.08, 0.08]}
+          baseColor={[1, 1, 1]}
+          arcColor={[0.12, 0.12, 0.12]}
+          glowColor={[1, 1, 1]}
+          dark={0}
+          mapBrightness={8}
           markerSize={0.11}
           markerElevation={0.02}
           speed={0.0025}
           theta={0.25}
           diffuse={1.4}
         />
-        <p className="mt-3 text-center text-xs text-zinc-400">
+        <p className="mt-3 text-center text-xs text-zinc-600">
           Position: {marker.location[0].toFixed(4)}, {marker.location[1].toFixed(4)}
         </p>
       </div>
@@ -764,7 +808,18 @@ export default function AboutYouPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-900 px-4 py-12 text-zinc-50">
+    <div className="min-h-screen bg-white px-4 py-12 text-zinc-900">
+      <div className="pointer-events-none fixed top-4 right-4 z-20 sm:top-8 sm:right-8">
+        <div className="pointer-events-auto">
+          <CraftButton asChild>
+            <Link to="/post-auth">
+              <CraftButtonLabel>Go to robot</CraftButtonLabel>
+              <CraftButtonIcon>↗</CraftButtonIcon>
+            </Link>
+          </CraftButton>
+        </div>
+      </div>
+
       <motion.div
         initial="initial"
         animate="animate"
@@ -787,9 +842,9 @@ export default function AboutYouPage() {
       </motion.div>
 
       {saveStateLabel || infoMessage ? (
-        <div className="mx-auto mt-4 flex max-w-4xl items-center justify-between gap-2 text-xs text-zinc-400">
+        <div className="mx-auto mt-4 flex max-w-4xl items-center justify-between gap-2 text-xs text-zinc-600">
           <span>{saveStateLabel}</span>
-          {infoMessage ? <span className="text-amber-300">{infoMessage}</span> : null}
+          {infoMessage ? <span className="text-amber-700">{infoMessage}</span> : null}
         </div>
       ) : null}
 
