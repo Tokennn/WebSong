@@ -6,6 +6,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import CommunityPage from '@/pages/CommunityPage';
 import DomeGalleryPage from '@/pages/DomeGalleryPage';
 import HomePage from '@/pages/HomePage';
+import AboutYouPage from '@/pages/AboutYouPage';
 import PostAuthPage from '@/pages/PostAuthPage';
 import SignInPage from '@/pages/SignInPage';
 
@@ -100,6 +101,14 @@ function App() {
             element={
               <AnimatedPage>
                 <CommunityPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/about-you"
+            element={
+              <AnimatedPage>
+                <AboutYouPage />
               </AnimatedPage>
             }
           />

@@ -157,10 +157,10 @@ export function LandingHero() {
             }}
           >
             <Link
-              to="/community"
+              to="/about-you"
               className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold tracking-tight text-black shadow-2xl md:text-base"
             >
-              Check docs <span className="ml-1 font-serif">→</span>
+              About You <span className="ml-1 font-serif">→</span>
             </Link>
           </motion.div>
 
@@ -177,7 +177,7 @@ export function LandingHero() {
               transition: { type: "spring", damping: 30, stiffness: 400 }
             }}
           >
-            ★ on GitHub
+            ★ Create
           </motion.a>
         </div>
       </div>

@@ -64,7 +64,7 @@ const COMMUNITY_SECTIONS: CommunitySection[] = [
 const COMMUNITY_MENU_ITEMS: StaggeredMenuItem[] = [
   { label: 'Home', ariaLabel: 'Go to home page', link: '/' },
   { label: 'Dome', ariaLabel: 'Go to dome page', link: '/dome-gallery' },
-  { label: 'Community', ariaLabel: 'Go to community page', link: '/community' },
+  { label: 'Your Songs', ariaLabel: 'Go to your songs page', link: '/post-auth' },
   { label: 'Sign-in', ariaLabel: 'Go to sign in page', link: '/sign-in' }
 ];
 
@@ -300,7 +300,7 @@ export default function CommunityPage() {
         items={menuItems}
         socialItems={COMMUNITY_SOCIAL_ITEMS}
         displaySocials={true}
-        displayItemNumbering={true}
+        displayItemNumbering={false}
         colors={['#f5f5f5', '#dedede']}
         menuButtonColor="#111111"
         openMenuButtonColor="#111111"
@@ -311,6 +311,7 @@ export default function CommunityPage() {
         avatarSrc={avatarSrc}
         avatarInitial={avatarInitial}
         avatarAlt={authUser?.email ? `Avatar ${authUser.email}` : 'User avatar'}
+        avatarLink="/about-you"
       />
 
       <section className="px-4 pt-20 pb-20 text-center sm:px-8">
