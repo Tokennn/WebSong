@@ -266,6 +266,7 @@ export const startSpotifyAuth = async () => {
   authUrl.searchParams.set('code_challenge_method', 'S256');
   authUrl.searchParams.set('code_challenge', challenge);
   authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('show_dialog', 'true');
 
   window.location.assign(authUrl.toString());
 };

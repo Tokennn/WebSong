@@ -252,7 +252,8 @@ export default function CreatePage() {
     }
 
     const spotifyOwnerId = getSpotifyOwnerId();
-    if (spotifyOwnerId && spotifyOwnerId !== user.id) {
+    const spotifyAuthExists = hasSpotifyAuth();
+    if (spotifyAuthExists && spotifyOwnerId !== user.id) {
       clearSpotifyAuth();
       clearSpotifyOwnerId();
       setSpotifyConnected(false);
