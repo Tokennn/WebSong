@@ -164,11 +164,8 @@ export function LandingHero() {
             </Link>
           </motion.div>
 
-          <motion.a
-            href="https://github.com/danielpetho/fancy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full bg-[#0015ff] px-5 py-2.5 text-sm font-semibold tracking-tight text-white shadow-2xl md:text-base"
+          <motion.div
+            className="rounded-full bg-[#0015ff] text-sm font-semibold tracking-tight text-white shadow-2xl md:text-base"
             animate={{ opacity: 1, y: 0 }}
             initial={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.25, ease: "easeOut", delay: 0.7 }}
@@ -177,8 +174,10 @@ export function LandingHero() {
               transition: { type: "spring", damping: 30, stiffness: 400 }
             }}
           >
-            ★ Create
-          </motion.a>
+            <Link to="/create" className="block rounded-full px-5 py-2.5">
+              ★ Create
+            </Link>
+          </motion.div>
         </div>
       </div>
     </section>
