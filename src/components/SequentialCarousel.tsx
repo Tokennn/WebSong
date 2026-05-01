@@ -19,6 +19,7 @@ type SequentialCarouselProps = {
   hideBackground?: boolean;
   animationOrigin?: number;
   fadeStartIndex?: number;
+  showNavigation?: boolean;
 };
 
 export default function SequentialCarousel({
@@ -29,7 +30,8 @@ export default function SequentialCarousel({
   backgroundColor = '#1e293b',
   hideBackground = false,
   animationOrigin = 0,
-  fadeStartIndex = 2
+  fadeStartIndex = 2,
+  showNavigation = true
 }: SequentialCarouselProps) {
   const originalCards = useMemo<InternalCard[]>(
     () => cardComponents.map((component, i) => ({ id: i + 1, component })),
@@ -205,63 +207,67 @@ export default function SequentialCarousel({
           justifyContent: 'center'
         }}
       >
-        <button
-          onClick={goToPrevious}
-          disabled={isAnimating}
-          style={{
-            position: 'absolute',
-            left: 20,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 100,
-            width: 48,
-            height: 48,
-            borderRadius: '50%',
-            border: 'none',
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            transition: 'all 0.2s ease',
-            opacity: isAnimating ? 0.5 : 1
-          }}
-          aria-label="Previous"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
+        {showNavigation ? (
+          <>
+            <button
+              onClick={goToPrevious}
+              disabled={isAnimating}
+              style={{
+                position: 'absolute',
+                left: 20,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 100,
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                border: 'none',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                transition: 'all 0.2s ease',
+                opacity: isAnimating ? 0.5 : 1
+              }}
+              aria-label="Previous"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
 
-        <button
-          onClick={advanceCarousel}
-          disabled={isAnimating}
-          style={{
-            position: 'absolute',
-            right: 20,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 100,
-            width: 48,
-            height: 48,
-            borderRadius: '50%',
-            border: 'none',
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            transition: 'all 0.2s ease',
-            opacity: isAnimating ? 0.5 : 1
-          }}
-          aria-label="Next"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </button>
+            <button
+              onClick={advanceCarousel}
+              disabled={isAnimating}
+              style={{
+                position: 'absolute',
+                right: 20,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 100,
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                border: 'none',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                transition: 'all 0.2s ease',
+                opacity: isAnimating ? 0.5 : 1
+              }}
+              aria-label="Next"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </>
+        ) : null}
 
         <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'visible' }}>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

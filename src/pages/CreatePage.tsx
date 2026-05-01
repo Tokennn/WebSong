@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { Link } from 'react-router-dom';
 
-import RippleGrid from '@/components/RippleGrid';
 import SequentialCarousel from '@/components/SequentialCarousel';
 import CraftButtonDemo from '@/components/shadcn-studio/button/button-49';
-import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
 import image1 from '@/assets/create/1.png';
 import image2 from '@/assets/create/2.jpg';
 import image3 from '@/assets/create/3.jpg';
@@ -504,165 +501,15 @@ export default function CreatePage() {
   );
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-zinc-950 text-white">
-      <RippleGrid
-        enableRainbow={false}
-        gridColor="#8ee6ff"
-        rippleIntensity={0.12}
-        gridSize={9}
-        gridThickness={12}
-        fadeDistance={1.45}
-        vignetteStrength={2.15}
-        glowIntensity={0.24}
-        opacity={0.92}
-        mouseInteraction
-        mouseInteractionRadius={0.85}
-      />
-
-      <div className="pointer-events-none absolute top-6 left-6 z-20 max-w-xl sm:top-10 sm:left-10 lg:top-14 lg:left-16">
-        <p className="mb-4 text-sm font-medium uppercase tracking-[0.28em] text-cyan-200/80">Create</p>
-        <h1 className="max-w-2xl text-4xl leading-none font-semibold text-white sm:text-5xl lg:text-6xl">
-          Sound made visible.
-        </h1>
-        <p className="mt-4 max-w-md text-sm leading-6 text-zinc-200 sm:text-base">
-          Connect Spotify and choose the artists, albums, or tracks you want in your 5 carousel cards.
-        </p>
-      </div>
-
+    <main className="relative min-h-screen overflow-hidden bg-black text-white">
       <div className="relative z-30 flex min-h-screen w-full flex-col">
-        <div className="px-4 pt-40 pb-2 sm:pt-52">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-3">
-            {spotifyAvailable ? (
-              spotifyConnected ? (
-                <>
-                  <CraftButton
-                    onClick={() => {
-                      void loadSpotifyCards();
-                    }}
-                    disabled={loadingSpotify}
-                    className="bg-white text-black"
-                  >
-                    <CraftButtonLabel>{loadingSpotify ? 'Refreshing...' : 'Refresh Spotify Cards'}</CraftButtonLabel>
-                    <CraftButtonIcon>↻</CraftButtonIcon>
-                  </CraftButton>
-                  <button
-                    type="button"
-                    onClick={handleDisconnectSpotify}
-                    className="rounded-full border border-white/30 px-4 py-2 text-sm text-white transition hover:border-white"
-                  >
-                    Disconnect
-                  </button>
-                </>
-              ) : (
-                <CraftButton onClick={() => void handleConnectSpotify()} disabled={loadingSpotify} className="bg-white text-black">
-                  <CraftButtonLabel>{loadingSpotify ? 'Connecting...' : 'Connect Spotify'}</CraftButtonLabel>
-                  <CraftButtonIcon>↗</CraftButtonIcon>
-                </CraftButton>
-              )
-            ) : (
-              <p className="text-sm text-zinc-300">Configure `VITE_SPOTIFY_CLIENT_ID` pour activer la connexion Spotify.</p>
-            )}
-
-            {!user ? (
-              <Link to="/sign-in" className="rounded-full border border-cyan-300/50 px-4 py-2 text-sm text-cyan-200 hover:border-cyan-200">
-                Sign in to save cards
-              </Link>
-            ) : null}
+        <div className="pointer-events-none absolute top-6 left-1/2 z-40 -translate-x-1/2 sm:top-10">
+          <div className="pointer-events-auto">
+            <CraftButtonDemo />
           </div>
-
-          {spotifyConnected ? (
-            <div className="mx-auto mt-3 w-full max-w-6xl rounded-2xl border border-white/15 bg-black/35 p-3 backdrop-blur">
-              <div className="flex flex-wrap items-center gap-2">
-                {[1, 2, 3, 4, 5].map(slotNumber => (
-                  <button
-                    key={slotNumber}
-                    type="button"
-                    onClick={() => setSelectedSlot(slotNumber)}
-                    className={`rounded-full px-3 py-1 text-xs transition ${
-                      selectedSlot === slotNumber ? 'bg-white text-black' : 'border border-white/25 text-white'
-                    }`}
-                  >
-                    Slot {slotNumber}
-                  </button>
-                ))}
-                {loadingSlots ? <span className="text-xs text-zinc-300">Loading saved slots…</span> : null}
-                {savingSlot ? <span className="text-xs text-zinc-300">Saving slot {savingSlot}…</span> : null}
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {slots.map((slot, index) => (
-                  <div key={`slot-preview-${index + 1}`} className="flex items-center gap-2 rounded-xl border border-white/20 px-2 py-1">
-                    <span className="text-xs text-zinc-300">{index + 1}</span>
-                    <span className="max-w-[180px] truncate text-xs text-white">{slot ? slot.title : 'Empty'}</span>
-                    {slot ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void handleClearSlot(index + 1);
-                        }}
-                        className="text-xs text-amber-300 hover:text-amber-200"
-                      >
-                        clear
-                      </button>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                <input
-                  value={searchQuery}
-                  onChange={event => setSearchQuery(event.target.value)}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      void handleSearch();
-                    }
-                  }}
-                  placeholder="Search artist, album, or track"
-                  className="w-full rounded-xl border border-white/20 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-cyan-300"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleSearch();
-                  }}
-                  disabled={searching}
-                  className="rounded-xl bg-white px-4 py-2 text-sm text-black disabled:opacity-60"
-                >
-                  {searching ? 'Searching…' : 'Search'}
-                </button>
-              </div>
-
-              {searchResults.length > 0 ? (
-                <div className="mt-3 grid max-h-52 grid-cols-1 gap-2 overflow-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
-                  {searchResults.map(result => (
-                    <button
-                      key={`${result.spotifyType}:${result.spotifyId}`}
-                      type="button"
-                      onClick={() => {
-                        void handleAssignSlot(selectedSlot, result);
-                      }}
-                      className="flex items-center gap-2 rounded-xl border border-white/15 bg-black/40 p-2 text-left transition hover:border-cyan-300"
-                    >
-                      <img src={result.imageUrl} alt={result.title} className="h-12 w-12 rounded-md object-cover" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm text-white">{result.title}</span>
-                        <span className="block truncate text-xs text-zinc-300">{result.subtitle}</span>
-                      </span>
-                      <span className="text-xs text-cyan-300">Use</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {spotifyError ? <p className="px-2 pt-2 text-center text-xs text-amber-300">{spotifyError}</p> : null}
-          {infoMessage ? <p className="px-2 pt-1 text-center text-xs text-zinc-300">{infoMessage}</p> : null}
         </div>
 
-        <div className="min-h-0 flex-1">
+        <div className="min-h-screen flex-1 pt-20 sm:pt-24">
           <SequentialCarousel
             cards={cards}
             backgroundColor="transparent"
@@ -672,13 +519,8 @@ export default function CreatePage() {
             sequenceDelay={80}
             animationOrigin={0}
             fadeStartIndex={2}
+            showNavigation={false}
           />
-        </div>
-
-        <div className="pointer-events-none absolute right-6 bottom-6 z-40 sm:right-10 sm:bottom-10 lg:right-16 lg:bottom-16">
-          <div className="pointer-events-auto">
-            <CraftButtonDemo />
-          </div>
         </div>
       </div>
     </main>
