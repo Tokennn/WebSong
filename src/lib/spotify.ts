@@ -27,11 +27,18 @@ type SpotifyImage = {
   url: string;
 };
 
-type SpotifyCardItem = {
+export type SpotifyCardItem = {
   imageUrl: string;
   title: string;
   subtitle: string;
   externalUrl: string;
+};
+
+export type SpotifySelectableType = 'artist' | 'album' | 'track';
+
+export type SpotifySelectableItem = SpotifyCardItem & {
+  spotifyType: SpotifySelectableType;
+  spotifyId: string;
 };
 
 type FollowedArtistsResponse = {
@@ -66,6 +73,37 @@ type SavedTracksResponse = {
       external_urls?: { spotify?: string };
     };
   }>;
+};
+
+type SearchResponse = {
+  artists?: {
+    items: Array<{
+      id: string;
+      name: string;
+      images: SpotifyImage[];
+      external_urls?: { spotify?: string };
+    }>;
+  };
+  albums?: {
+    items: Array<{
+      id: string;
+      name: string;
+      images: SpotifyImage[];
+      artists: Array<{ name: string }>;
+      external_urls?: { spotify?: string };
+    }>;
+  };
+  tracks?: {
+    items: Array<{
+      id: string;
+      name: string;
+      album: {
+        images: SpotifyImage[];
+      };
+      artists: Array<{ name: string }>;
+      external_urls?: { spotify?: string };
+    }>;
+  };
 };
 
 type FinalizeSpotifyAuthResult = {
@@ -352,3 +390,74 @@ export const fetchSpotifyCarouselItems = async (maxItems = 5): Promise<SpotifyCa
   return selected.slice(0, maxItems);
 };
 
+export const searchSpotifyItems = async (query: string, limit = 12): Promise<SpotifySelectableItem[]> => {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) return [];
+
+  const accessToken = await getSpotifyAccessToken();
+  if (!accessToken) return [];
+
+  const params = new URLSearchParams({
+    q: trimmedQuery,
+    type: 'artist,album,track',
+    limit: String(Math.max(1, Math.min(limit, 20)))
+  });
+
+  const payload = await spotifyRequest<SearchResponse>(`/search?${params.toString()}`, accessToken);
+
+  const artists: SpotifySelectableItem[] =
+    payload.artists?.items
+      ?.map(artist => ({
+        spotifyType: 'artist' as const,
+        spotifyId: artist.id,
+        imageUrl: artist.images[0]?.url ?? '',
+        title: artist.name,
+        subtitle: 'Artist',
+        externalUrl: artist.external_urls?.spotify ?? ''
+      }))
+      .filter(item => item.spotifyId && item.imageUrl && item.externalUrl) ?? [];
+
+  const albums: SpotifySelectableItem[] =
+    payload.albums?.items
+      ?.map(album => ({
+        spotifyType: 'album' as const,
+        spotifyId: album.id,
+        imageUrl: album.images[0]?.url ?? '',
+        title: album.name,
+        subtitle: `${album.artists.map(artist => artist.name).join(', ')} • Album`,
+        externalUrl: album.external_urls?.spotify ?? ''
+      }))
+      .filter(item => item.spotifyId && item.imageUrl && item.externalUrl) ?? [];
+
+  const tracks: SpotifySelectableItem[] =
+    payload.tracks?.items
+      ?.map(track => ({
+        spotifyType: 'track' as const,
+        spotifyId: track.id,
+        imageUrl: track.album.images[0]?.url ?? '',
+        title: track.name,
+        subtitle: `${track.artists.map(artist => artist.name).join(', ')} • Track`,
+        externalUrl: track.external_urls?.spotify ?? ''
+      }))
+      .filter(item => item.spotifyId && item.imageUrl && item.externalUrl) ?? [];
+
+  const byPriority = [artists, albums, tracks];
+  const out: SpotifySelectableItem[] = [];
+  const seen = new Set<string>();
+  let cursor = 0;
+
+  while (out.length < limit && byPriority.some(items => cursor < items.length)) {
+    for (const items of byPriority) {
+      const candidate = items[cursor];
+      if (!candidate) continue;
+      const key = `${candidate.spotifyType}:${candidate.spotifyId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(candidate);
+      if (out.length >= limit) break;
+    }
+    cursor += 1;
+  }
+
+  return out;
+};
