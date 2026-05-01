@@ -83,12 +83,14 @@ export default function SequentialCarousel({
 
     return {
       position: 'absolute',
+      top: '50%',
+      left: '50%',
       borderRadius: 16,
       boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      transform: `translateX(${cumulativeTranslateX}px) translateY(${translateY}px) scale(${scale})`,
+      transform: `translate(-50%, -50%) translateX(${cumulativeTranslateX}px) translateY(${translateY}px) scale(${scale})`,
       opacity,
       zIndex,
       transition: animate ? `all ${animationDuration}ms ${easing} ${delay}ms` : 'none'

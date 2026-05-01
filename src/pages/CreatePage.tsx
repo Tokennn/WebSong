@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 
 import SequentialCarousel from '@/components/SequentialCarousel';
-import CraftButtonDemo from '@/components/shadcn-studio/button/button-49';
 import image1 from '@/assets/create/1.png';
 import image2 from '@/assets/create/2.jpg';
 import image3 from '@/assets/create/3.jpg';
@@ -501,25 +500,31 @@ export default function CreatePage() {
   );
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-black text-white">
-      <div className="relative z-30 flex min-h-screen w-full flex-col">
+    <main className="relative h-[100dvh] overflow-hidden bg-black text-white">
+      <div className="relative z-30 h-full w-full">
         <div className="pointer-events-none absolute top-6 left-1/2 z-40 -translate-x-1/2 sm:top-10">
           <div className="pointer-events-auto">
-            <CraftButtonDemo />
+            <button
+              type="button"
+              onClick={spotifyConnected ? handleDisconnectSpotify : handleConnectSpotify}
+              disabled={loadingSpotify || !spotifyAvailable}
+              className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loadingSpotify ? 'Connexion...' : spotifyConnected ? 'Se deconnecter' : 'Se connecter'}
+            </button>
           </div>
         </div>
 
-        <div className="min-h-screen flex-1 pt-20 sm:pt-24">
+        <div className="absolute inset-0">
           <SequentialCarousel
             cards={cards}
-            backgroundColor="transparent"
-            hideBackground
+            backgroundColor="#000000"
             cardGap={280}
             animationDuration={600}
             sequenceDelay={80}
             animationOrigin={0}
             fadeStartIndex={2}
-            showNavigation={false}
+            showNavigation
           />
         </div>
       </div>
