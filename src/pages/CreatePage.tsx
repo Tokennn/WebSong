@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
+import { ArrowUpRightIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import SequentialCarousel from '@/components/SequentialCarousel';
 import image1 from '@/assets/create/1.png';
 import image2 from '@/assets/create/2.jpg';
 import image3 from '@/assets/create/3.jpg';
 import image4 from '@/assets/create/4.jpg';
+import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
 import { supabase } from '@/lib/supabase';
 import {
   clearSpotifyAuth,
@@ -503,15 +506,26 @@ export default function CreatePage() {
     <main className="relative h-[100dvh] overflow-hidden bg-black text-white">
       <div className="relative z-30 h-full w-full">
         <div className="pointer-events-none absolute top-6 left-1/2 z-40 -translate-x-1/2 sm:top-10">
-          <div className="pointer-events-auto">
-            <button
-              type="button"
+          <div className="pointer-events-auto flex items-center gap-3">
+            <CraftButton
               onClick={spotifyConnected ? handleDisconnectSpotify : handleConnectSpotify}
               disabled={loadingSpotify || !spotifyAvailable}
-              className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+              hoverTheme="spotify"
+              className="h-11 px-5"
             >
-              {loadingSpotify ? 'Connexion...' : spotifyConnected ? 'Se deconnecter' : 'Se connecter'}
-            </button>
+              <CraftButtonLabel>{loadingSpotify ? 'Connexion...' : spotifyConnected ? 'Se deconnecter' : 'Se connecter'}</CraftButtonLabel>
+              <CraftButtonIcon>
+                <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+              </CraftButtonIcon>
+            </CraftButton>
+            <CraftButton asChild className="h-11 px-5">
+              <Link to="/post-auth">
+                <CraftButtonLabel>Présentation</CraftButtonLabel>
+                <CraftButtonIcon>
+                  <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+                </CraftButtonIcon>
+              </Link>
+            </CraftButton>
           </div>
         </div>
 

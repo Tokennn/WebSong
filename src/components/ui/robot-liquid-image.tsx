@@ -24,6 +24,7 @@ export function RobotLiquidImage({
   className,
   style
 }: LiquidImageProps) {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [size, setSize] = useState({ width: 400, height: 300 });
   const dprRef = useRef(1);
@@ -39,17 +40,30 @@ export function RobotLiquidImage({
   }, [hotspots]);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
     const resize = () => {
+      if (!wrapperRef.current) return;
       const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
       dprRef.current = dpr;
-      const w = Math.max(1, Math.round(canvasRef.current!.offsetWidth * dpr));
-      const h = Math.max(1, Math.round(canvasRef.current!.offsetHeight * dpr));
-      setSize({ width: w, height: h });
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width * dpr));
+      const h = Math.max(1, Math.round(rect.height * dpr));
+      setSize(current => (current.width === w && current.height === h ? current : { width: w, height: h }));
     };
+
     resize();
+    const raf = window.requestAnimationFrame(resize);
+    const observer =
+      typeof ResizeObserver !== 'undefined' && wrapperRef.current
+        ? new ResizeObserver(() => resize())
+        : null;
+    if (observer && wrapperRef.current) observer.observe(wrapperRef.current);
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      if (observer) observer.disconnect();
+      window.removeEventListener('resize', resize);
+    };
   }, []);
 
   const handleMove = useCallback((event: React.MouseEvent | React.TouchEvent) => {
@@ -116,8 +130,8 @@ export function RobotLiquidImage({
     const dpr = dprRef.current || 1;
     canvasRef.current.width = size.width;
     canvasRef.current.height = size.height;
-    canvasRef.current.style.width = `${size.width / dpr}px`;
-    canvasRef.current.style.height = `${size.height / dpr}px`;
+    canvasRef.current.style.width = '100%';
+    canvasRef.current.style.height = '100%';
 
     let gl = canvasRef.current.getContext('webgl');
     if (!gl) return;
@@ -261,6 +275,7 @@ export function RobotLiquidImage({
 
     img.onload = () => {
       setup();
+      updateTexture();
       render();
     };
 
@@ -292,7 +307,6 @@ export function RobotLiquidImage({
     const render = () => {
       if (!loaded || !gl) return;
 
-      updateTexture();
       gl.viewport(0, 0, size.width, size.height);
       gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -339,6 +353,7 @@ export function RobotLiquidImage({
 
   return (
     <div
+      ref={wrapperRef}
       className={className}
       style={{
         ...style,
@@ -363,4 +378,3 @@ export function RobotLiquidImage({
     </div>
   );
 }
-

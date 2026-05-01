@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 
 import { SplineSceneBasic } from '@/components/ui/spline-scene-basic';
-import { RobotBentoGallery } from '@/components/ui/robot-bento-gallery';
 import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
+import { RobotLiquidImage } from '@/components/ui/robot-liquid-image';
 import { RobotStaggered3DGrid } from '@/components/ui/robot-staggered-3d-grid';
 
 export default function PostAuthPage() {
@@ -27,8 +27,20 @@ export default function PostAuthPage() {
         <RobotStaggered3DGrid />
       </section>
 
-      <section className="bg-black pt-10 pb-16">
-        <RobotBentoGallery />
+      <section className="bg-black px-4 pt-10 pb-24 sm:px-10">
+        <div className="mx-auto w-full max-w-[1720px] rounded-[18px] border border-white/10 bg-black/60 p-2 sm:p-4">
+          <div className="h-[48vh] min-h-[260px] w-full overflow-hidden rounded-[14px] sm:h-[62vh]">
+            <RobotLiquidImage
+              image={{
+                src: 'https://y4pdgnepgswqffpt.public.blob.vercel-storage.com/components/L2g2etirT4tdjBaE4xrO/liquid-image-D7KkaJDtqD7nibKLhEzzQtKsEc02iM',
+                alt: 'Liquid image effect'
+              }}
+              strength={0.15}
+              speed={0.18}
+              borderRadius={14}
+            />
+          </div>
+        </div>
       </section>
     </main>
   );

@@ -10,12 +10,14 @@ import { cn } from '@/lib/utils'
 
 const CraftButtonContext = React.createContext<{
   size?: VariantProps<typeof buttonVariants>['size']
+  hoverTheme?: 'default' | 'spotify'
 }>({})
 
 interface CraftButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: VariantProps<typeof buttonVariants>['size']
   children?: React.ReactNode
   asChild?: boolean
+  hoverTheme?: 'default' | 'spotify'
 }
 
 interface CraftButtonLabelProps {
@@ -29,28 +31,40 @@ interface CraftButtonIconProps {
 }
 
 function CraftButtonLabel({ children, className }: CraftButtonLabelProps) {
+  const { hoverTheme } = React.useContext(CraftButtonContext)
+
   return (
-    <span className={cn('group-hover:text-foreground relative z-2 transition-colors duration-500', className)}>
+    <span
+      className={cn(
+        'relative z-2 transition-colors duration-500',
+        hoverTheme === 'spotify' ? 'group-hover:text-black' : 'group-hover:text-foreground',
+        className
+      )}
+    >
       {children}
     </span>
   )
 }
 
 function CraftButtonIcon({ children, className }: CraftButtonIconProps) {
-  const { size } = React.useContext(CraftButtonContext)
+  const { size, hoverTheme } = React.useContext(CraftButtonContext)
   const iconSize = size === 'lg' ? 'size-6' : size === 'sm' ? 'size-4' : 'size-5'
 
   return (
     <span className={cn('relative z-1', iconSize, className)}>
       <span
         className={cn(
-          'bg-background absolute inset-0 -z-1 rounded-full transition-transform duration-500 group-hover:scale-[15]',
+          'absolute inset-0 -z-1 rounded-full transition-transform duration-500 group-hover:scale-[15]',
+          hoverTheme === 'spotify' ? 'bg-[#1DB954]' : 'bg-background',
           iconSize
         )}
       />
       <span
         className={cn(
-          'bg-background text-primary group-hover:bg-primary group-hover:text-background relative z-2 flex items-center justify-center rounded-full transition-all duration-500',
+          'relative z-2 flex items-center justify-center rounded-full transition-all duration-500',
+          hoverTheme === 'spotify'
+            ? 'bg-background text-primary group-hover:bg-[#1DB954] group-hover:text-black'
+            : 'bg-background text-primary group-hover:bg-primary group-hover:text-background',
           iconSize
         )}
       >
@@ -61,15 +75,16 @@ function CraftButtonIcon({ children, className }: CraftButtonIconProps) {
 }
 
 function CraftButton(props: CraftButtonProps) {
-  const { children, size, asChild = false, className, ...rest } = props
+  const { children, size, asChild = false, className, hoverTheme = 'default', ...rest } = props
 
   return (
-    <CraftButtonContext.Provider value={{ size }}>
+    <CraftButtonContext.Provider value={{ size, hoverTheme }}>
       <Button
         size={size}
         asChild={asChild}
         className={cn(
-          'group hover:bg-background dark:hover:border-primary/30 relative cursor-pointer overflow-hidden rounded-full duration-500 hover:shadow-md dark:border dark:border-transparent',
+          'group relative cursor-pointer overflow-hidden rounded-full duration-500 hover:shadow-md dark:border dark:border-transparent',
+          hoverTheme === 'spotify' ? 'hover:bg-[#1DB954]' : 'hover:bg-background dark:hover:border-primary/30',
           className
         )}
         {...rest}
