@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowUpRightIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 import ScrollFadeProfileSuggestions, { type ProfileSuggestionItem } from '@/components/ScrollFadeProfileSuggestions';
-import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
 import { supabase } from '@/lib/supabase';
 
 type ProfileSuggestionRow = {
@@ -93,41 +90,9 @@ export default function ProfileSuggestionsPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgba(29,185,84,0.22),transparent_42%),radial-gradient(circle_at_80%_10%,rgba(80,70,255,0.2),transparent_40%),#040404] px-4 pt-24 pb-16 sm:px-10">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-xs tracking-[0.32em] text-zinc-400 uppercase">WebSong Discover</p>
-          <h1 className="mt-5 max-w-3xl text-4xl leading-tight font-semibold sm:text-6xl">Profils recommandés pour ta prochaine découverte.</h1>
-          <p className="mt-5 max-w-2xl text-sm leading-relaxed text-zinc-300 sm:text-base">
-            Ce flux reprend les profils publiés par les membres connectés à la plateforme et les affiche avec un effet scroll/fade.
-          </p>
-
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <CraftButton asChild className="h-11 px-5">
-              <Link to="/create">
-                <CraftButtonLabel>Retour Create</CraftButtonLabel>
-                <CraftButtonIcon>
-                  <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
-                </CraftButtonIcon>
-              </Link>
-            </CraftButton>
-            <CraftButton asChild className="h-11 px-5">
-              <Link to="/community">
-                <CraftButtonLabel>Community</CraftButtonLabel>
-                <CraftButtonIcon>
-                  <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
-                </CraftButtonIcon>
-              </Link>
-            </CraftButton>
-          </div>
-
-          {infoMessage ? <p className="mt-6 text-sm text-amber-300">{infoMessage}</p> : null}
-          {loading ? <p className="mt-6 text-sm text-zinc-400">Chargement des profils...</p> : null}
-        </div>
-      </section>
-
-      <section className="pt-10">
-        <ScrollFadeProfileSuggestions items={displayItems} />
-      </section>
+      <ScrollFadeProfileSuggestions items={displayItems} />
+      {infoMessage ? <p className="fixed top-4 left-4 z-40 max-w-sm text-sm text-amber-300">{infoMessage}</p> : null}
+      {loading ? <p className="fixed top-4 right-4 z-40 text-sm text-zinc-400">Chargement des profils...</p> : null}
     </main>
   );
 }
