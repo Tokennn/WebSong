@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 
 import { SplineSceneBasic } from '@/components/ui/spline-scene-basic';
 import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
-import { RobotLiquidImage } from '@/components/ui/robot-liquid-image';
 import { RobotStaggered3DGrid } from '@/components/ui/robot-staggered-3d-grid';
 
 export default function PostAuthPage() {
@@ -28,26 +27,11 @@ export default function PostAuthPage() {
       </section>
 
       <section className="bg-black px-4 pt-10 pb-24 sm:px-10">
-        <div className="mx-auto w-full max-w-[1720px] rounded-[18px] border border-white/10 bg-black/60 p-2 sm:p-4">
-          <div className="h-[48vh] min-h-[260px] w-full overflow-hidden rounded-[14px] sm:h-[62vh]">
-            <RobotLiquidImage
-              image={{
-                src: 'https://y4pdgnepgswqffpt.public.blob.vercel-storage.com/components/L2g2etirT4tdjBaE4xrO/liquid-image-D7KkaJDtqD7nibKLhEzzQtKsEc02iM',
-                alt: 'Liquid image effect'
-              }}
-              strength={0.15}
-              speed={0.18}
-              borderRadius={14}
-            />
-          </div>
-          <div className="mt-4 flex justify-center sm:mt-5">
-            <CraftButton asChild>
-              <Link to="/dome-gallery">
-                <CraftButtonLabel>Discover</CraftButtonLabel>
-                <CraftButtonIcon>↗</CraftButtonIcon>
-              </Link>
-            </CraftButton>
-          </div>
+        <div className="mx-auto flex w-full max-w-[1720px] justify-center">
+          <CraftButton type="button" aria-label="Discover">
+            <CraftButtonLabel>Discover</CraftButtonLabel>
+            <CraftButtonIcon>↗</CraftButtonIcon>
+          </CraftButton>
         </div>
       </section>
     </main>
