@@ -138,6 +138,7 @@ function clearSpotifyOwnerId() {
 
 export default function CreatePage() {
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const [spotifyCards, setSpotifyCards] = useState<SpotifyCardItem[]>([]);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
@@ -159,15 +160,22 @@ export default function CreatePage() {
   const spotifyAvailable = isSpotifyConfigured();
 
   useEffect(() => {
+    let active = true;
+
     void supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
       setUser(data.session?.user ?? null);
+      setAuthReady(true);
     });
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
       setUser(session?.user ?? null);
+      setAuthReady(true);
     });
 
     return () => {
+      active = false;
       data.subscription.unsubscribe();
     };
   }, []);
@@ -239,6 +247,8 @@ export default function CreatePage() {
   }, [spotifyAvailable]);
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!user) {
       setSlots([...EMPTY_SLOTS]);
       setDbReady(true);
@@ -294,7 +304,7 @@ export default function CreatePage() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [authReady, user]);
 
   const handleConnectSpotify = useCallback(async () => {
     if (!user) {

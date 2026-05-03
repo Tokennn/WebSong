@@ -40,6 +40,14 @@ export default function PostAuthPage() {
               borderRadius={14}
             />
           </div>
+          <div className="mt-4 flex justify-center sm:mt-5">
+            <CraftButton asChild>
+              <Link to="/dome-gallery">
+                <CraftButtonLabel>Discover</CraftButtonLabel>
+                <CraftButtonIcon>↗</CraftButtonIcon>
+              </Link>
+            </CraftButton>
+          </div>
         </div>
       </section>
     </main>
