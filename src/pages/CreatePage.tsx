@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { ArrowUpRightIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import SequentialCarousel from '@/components/SequentialCarousel';
 import image1 from '@/assets/create/1.png';
@@ -42,6 +42,10 @@ type CreateCardRow = {
   updated_at?: string;
 };
 
+type PublishedProfileRow = {
+  user_id: string;
+};
+
 const DEFAULT_CARD_ITEMS: CardItem[] = [
   {
     image: 'https://framerusercontent.com/images/9R8HmP4k64b7LiIOGJZKnCoGLAI.jpeg?width=1200&height=1600',
@@ -71,13 +75,23 @@ const DEFAULT_CARD_ITEMS: CardItem[] = [
 ];
 
 const EMPTY_SLOTS: Array<SpotifySelectableItem | null> = [null, null, null, null, null];
-const SPOTIFY_OWNER_STORAGE_KEY = 'websong.spotify.owner.v1';
+const SPOTIFY_OWNER_STORAGE_KEY = 'websong.spotify.owner.v2';
+const SPOTIFY_OWNER_STORAGE_KEY_LEGACY = 'websong.spotify.owner.v1';
 
 function isMissingCreateCardsTableError(error: { message?: string; code?: string } | null): boolean {
   if (!error) return false;
   const message = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
   return (
     message.includes('create_cards') &&
+    (message.includes('does not exist') || message.includes('relation') || message.includes('schema cache'))
+  );
+}
+
+function isMissingPublishedProfilesTableError(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  const message = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
+  return (
+    message.includes('published_profiles') &&
     (message.includes('does not exist') || message.includes('relation') || message.includes('schema cache'))
   );
 }
@@ -121,22 +135,31 @@ function buildSlotsFromRows(rows: CreateCardRow[]): Array<SpotifySelectableItem 
   return slots;
 }
 
-function getSpotifyOwnerId(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(SPOTIFY_OWNER_STORAGE_KEY);
+function getUserSyncOwnerKey(user: User): string {
+  const email = user.email?.trim().toLowerCase();
+  return email && email.length > 0 ? `email:${email}` : `id:${user.id}`;
 }
 
-function setSpotifyOwnerId(userId: string) {
+function getSpotifyOwnerId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(SPOTIFY_OWNER_STORAGE_KEY) ?? localStorage.getItem(SPOTIFY_OWNER_STORAGE_KEY_LEGACY);
+}
+
+function setSpotifyOwnerId(ownerKey: string) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(SPOTIFY_OWNER_STORAGE_KEY, userId);
+  localStorage.setItem(SPOTIFY_OWNER_STORAGE_KEY, ownerKey);
+  localStorage.removeItem(SPOTIFY_OWNER_STORAGE_KEY_LEGACY);
 }
 
 function clearSpotifyOwnerId() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(SPOTIFY_OWNER_STORAGE_KEY);
+  localStorage.removeItem(SPOTIFY_OWNER_STORAGE_KEY_LEGACY);
 }
 
 export default function CreatePage() {
+  const navigate = useNavigate();
+
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
@@ -148,6 +171,7 @@ export default function CreatePage() {
   const [slots, setSlots] = useState<Array<SpotifySelectableItem | null>>(EMPTY_SLOTS);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [savingSlot, setSavingSlot] = useState<number | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpotifySelectableItem[]>([]);
@@ -263,7 +287,9 @@ export default function CreatePage() {
 
     const spotifyOwnerId = getSpotifyOwnerId();
     const spotifyAuthExists = hasSpotifyAuth();
-    if (spotifyAuthExists && spotifyOwnerId !== user.id) {
+    const expectedOwnerKey = getUserSyncOwnerKey(user);
+
+    if (spotifyAuthExists && spotifyOwnerId !== expectedOwnerKey) {
       clearSpotifyAuth();
       clearSpotifyOwnerId();
       setSpotifyConnected(false);
@@ -313,7 +339,7 @@ export default function CreatePage() {
     }
 
     setSpotifyError(null);
-    setSpotifyOwnerId(user.id);
+    setSpotifyOwnerId(getUserSyncOwnerKey(user));
     try {
       await startSpotifyAuth();
     } catch (error) {
@@ -434,6 +460,38 @@ export default function CreatePage() {
     [user]
   );
 
+  const handlePublish = useCallback(async () => {
+    if (!user) {
+      setInfoMessage('Connecte-toi à ton compte WebSong avant de publier ton profil.');
+      return;
+    }
+
+    if (!spotifyConnected) {
+      setInfoMessage('Connecte Spotify avant de publier ton profil.');
+      return;
+    }
+
+    setPublishing(true);
+    setInfoMessage(null);
+
+    const { error } = await supabase
+      .from('published_profiles')
+      .upsert(({ user_id: user.id } satisfies PublishedProfileRow), { onConflict: 'user_id' });
+
+    setPublishing(false);
+
+    if (error) {
+      if (isMissingPublishedProfilesTableError(error)) {
+        setInfoMessage("Table 'published_profiles' absente. Exécute docs/published_profiles.sql sur Supabase.");
+      } else {
+        setInfoMessage(error.message);
+      }
+      return;
+    }
+
+    navigate('/profile-suggestions');
+  }, [navigate, spotifyConnected, user]);
+
   const activeCardItems = useMemo(() => {
     const hasCustomSlots = slots.some(Boolean);
     if (hasCustomSlots) {
@@ -552,6 +610,26 @@ export default function CreatePage() {
             showNavigation
           />
         </div>
+
+        {user && spotifyConnected ? (
+          <div className="pointer-events-none absolute bottom-8 left-1/2 z-40 -translate-x-1/2">
+            <div className="pointer-events-auto">
+              <CraftButton type="button" onClick={handlePublish} disabled={publishing} className="h-12 px-7">
+                <CraftButtonLabel>{publishing ? 'Publishing...' : 'Publish'}</CraftButtonLabel>
+                <CraftButtonIcon>
+                  <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+                </CraftButtonIcon>
+              </CraftButton>
+            </div>
+          </div>
+        ) : null}
+
+        {infoMessage || spotifyError ? (
+          <div className="pointer-events-none absolute right-4 bottom-3 left-4 z-40 mx-auto max-w-2xl rounded-xl border border-white/15 bg-black/55 px-4 py-2 text-center text-xs text-white/80 backdrop-blur-md">
+            {infoMessage ? <p className="m-0 text-amber-300">{infoMessage}</p> : null}
+            {spotifyError ? <p className="m-0 text-red-300">{spotifyError}</p> : null}
+          </div>
+        ) : null}
       </div>
     </main>
   );

@@ -10,6 +10,7 @@ import AboutYouPage from '@/pages/AboutYouPage';
 import PostAuthPage from '@/pages/PostAuthPage';
 import SignInPage from '@/pages/SignInPage';
 import CreatePage from '@/pages/CreatePage';
+import ProfileSuggestionsPage from '@/pages/ProfileSuggestionsPage';
 
 function AnimatedPage({ children }: { children: ReactNode }) {
   return (
@@ -119,6 +120,14 @@ function App() {
           element={
             <AnimatedPage>
               <CreatePage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/profile-suggestions"
+          element={
+            <AnimatedPage>
+              <ProfileSuggestionsPage />
             </AnimatedPage>
           }
         />
