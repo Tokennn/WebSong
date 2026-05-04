@@ -9,6 +9,7 @@ import HomePage from '@/pages/HomePage';
 import AboutYouPage from '@/pages/AboutYouPage';
 import PostAuthPage from '@/pages/PostAuthPage';
 import SignInPage from '@/pages/SignInPage';
+import SignUpPage from '@/pages/SignUpPage';
 import CreatePage from '@/pages/CreatePage';
 import ProfileSuggestionsPage from '@/pages/ProfileSuggestionsPage';
 
@@ -112,6 +113,14 @@ function App() {
           element={
             <AnimatedPage>
               <SignInPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/sign-up"
+          element={
+            <AnimatedPage>
+              <SignUpPage />
             </AnimatedPage>
           }
         />

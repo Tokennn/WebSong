@@ -15,7 +15,7 @@ export function SplineSceneBasic() {
 
       <div className="hidden h-full lg:grid lg:grid-cols-[1.05fr_0.95fr]">
         <div className="relative z-10 min-h-0 overflow-hidden">
-          <div className="h-full overflow-y-auto">
+          <div className="h-full overflow-hidden">
             <LandingHero />
           </div>
         </div>

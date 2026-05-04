@@ -2,22 +2,22 @@ import { Headphones } from 'lucide-react';
 
 import { AuthComponent } from '@/components/ui/sign-up';
 
-const SignInLogo = () => (
+const SignUpLogo = () => (
   <div className="rounded-md bg-zinc-100 p-1.5 text-zinc-900">
     <Headphones className="h-4 w-4" />
   </div>
 );
 
-export default function SignInPage() {
+export default function SignUpPage() {
   return (
     <AuthComponent
-      logo={<SignInLogo />}
+      logo={<SignUpLogo />}
       brandName=""
       useGradientBackground={false}
       communityTypography={true}
       showHeader={false}
       className="bg-[#0b0920]"
-      initialAuthMode="signIn"
+      initialAuthMode="signUp"
     />
   );
 }

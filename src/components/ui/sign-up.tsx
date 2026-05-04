@@ -370,6 +370,7 @@ interface AuthComponentProps {
   className?: string;
   communityTypography?: boolean;
   showHeader?: boolean;
+  initialAuthMode?: 'signIn' | 'signUp';
 }
 
 export const AuthComponent = ({
@@ -378,9 +379,11 @@ export const AuthComponent = ({
   useGradientBackground = true,
   className,
   communityTypography = false,
-  showHeader = true
+  showHeader = true,
+  initialAuthMode = 'signIn'
 }: AuthComponentProps) => {
   const navigate = useNavigate();
+  const [authMode, setAuthMode] = useState<'signIn' | 'signUp'>(initialAuthMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -415,7 +418,7 @@ export const AuthComponent = ({
   };
 
   const getAuthRedirectTo = () =>
-    typeof window === 'undefined' ? undefined : `${window.location.origin}/sign-in`;
+    typeof window === 'undefined' ? undefined : `${window.location.origin}${POST_AUTH_PATH}`;
 
   const redirectAfterAuth = useCallback(() => {
     if (hasRedirectedAfterAuthRef.current) return;
@@ -471,7 +474,7 @@ export const AuthComponent = ({
         email,
         options: {
           emailRedirectTo: redirectTo,
-          shouldCreateUser: true
+          shouldCreateUser: false
         }
       });
 
@@ -484,6 +487,38 @@ export const AuthComponent = ({
       setModalStatus('success');
     } catch (error) {
       handleAuthError('Unable to send magic link.', error);
+    }
+  };
+
+  const handlePasswordSignIn = async () => {
+    if (!isEmailValid) {
+      setModalErrorMessage('Enter a valid email address.');
+      setModalStatus('error');
+      return;
+    }
+    if (!isPasswordValid) {
+      setModalErrorMessage('Password must contain at least 6 characters.');
+      setModalStatus('error');
+      return;
+    }
+    if (modalStatus !== 'closed') return;
+
+    setModalStatus('loading');
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        handleAuthError('Unable to sign in with email and password.', error);
+        return;
+      }
+
+      setModalSuccessMessage('Signed in successfully.');
+      setModalStatus('success');
+    } catch (error) {
+      handleAuthError('Unable to sign in with email and password.', error);
     }
   };
 
@@ -530,7 +565,13 @@ export const AuthComponent = ({
 
   const handleProgressStep = () => {
     if (authStep === 'email' && isEmailValid) setAuthStep('password');
-    if (authStep === 'password' && isPasswordValid) setAuthStep('confirmPassword');
+    if (authStep === 'password' && isPasswordValid) {
+      if (authMode === 'signIn') {
+        void handlePasswordSignIn();
+        return;
+      }
+      setAuthStep('confirmPassword');
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -548,11 +589,34 @@ export const AuthComponent = ({
     if (authStep === 'password') setAuthStep('email');
   };
 
+  const switchAuthMode = (nextMode: 'signIn' | 'signUp') => {
+    if (nextMode === authMode) return;
+    setAuthMode(nextMode);
+    setAuthStep('email');
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    if (modalStatus !== 'closed') closeModal();
+  };
+
   const closeModal = () => {
     setModalStatus('closed');
     setModalErrorMessage('');
     setModalSuccessMessage('Welcome Aboard!');
   };
+
+  useEffect(() => {
+    setAuthMode(initialAuthMode);
+    setAuthStep('email');
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setModalStatus('closed');
+    setModalErrorMessage('');
+    setModalSuccessMessage('Welcome Aboard!');
+  }, [initialAuthMode]);
 
   useEffect(() => {
     if (authStep === 'password') window.setTimeout(() => passwordInputRef.current?.focus(), 500);
@@ -710,6 +774,30 @@ export const AuthComponent = ({
             disabled={modalStatus !== 'closed'}
             className="pointer-events-auto relative flex w-full max-w-[340px] flex-col items-center gap-8 p-4"
           >
+          <div className="flex w-full items-center justify-center">
+            <div className="inline-flex rounded-full border border-white/10 bg-black/45 p-1">
+              <button
+                type="button"
+                onClick={() => switchAuthMode('signIn')}
+                className={cn(
+                  'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                  authMode === 'signIn' ? 'bg-white text-black' : 'text-zinc-300 hover:text-white'
+                )}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => switchAuthMode('signUp')}
+                className={cn(
+                  'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                  authMode === 'signUp' ? 'bg-white text-black' : 'text-zinc-300 hover:text-white'
+                )}
+              >
+                Sign up
+              </button>
+            </div>
+          </div>
           <AnimatePresence mode="wait">
             {authStep === 'email' ? (
               <motion.div
@@ -723,7 +811,7 @@ export const AuthComponent = ({
                 <BlurFade delay={0.25} className="w-full">
                   <div className="text-center">
                     <ShinyText
-                      text="Get started with Us"
+                      text={authMode === 'signIn' ? 'Welcome back' : 'Create your account'}
                       speed={2}
                       delay={0}
                       color="#b5b5b5"
@@ -791,11 +879,15 @@ export const AuthComponent = ({
               >
                 <BlurFade delay={0} className="w-full">
                   <div className="text-center">
-                    <p className={titleClass}>Create your password</p>
+                    <p className={titleClass}>{authMode === 'signIn' ? 'Enter your password' : 'Create your password'}</p>
                   </div>
                 </BlurFade>
                 <BlurFade delay={0.25}>
-                  <p className="text-sm font-medium text-zinc-300">Your password must be at least 6 characters long.</p>
+                  <p className="text-sm font-medium text-zinc-300">
+                    {authMode === 'signIn'
+                      ? 'Use the password linked to this account.'
+                      : 'Your password must be at least 6 characters long.'}
+                  </p>
                 </BlurFade>
               </motion.div>
             ) : null}
@@ -888,7 +980,7 @@ export const AuthComponent = ({
                     </div>
                   </BlurFade>
                   <AnimatePresence>
-                    {authStep === 'email' ? (
+                    {authStep === 'email' && authMode === 'signIn' ? (
                       <BlurFade key="magic-link" delay={0.1} className="w-full">
                         <button
                           type="button"
@@ -953,9 +1045,15 @@ export const AuthComponent = ({
                               >
                                 <GlassButton
                                   type="button"
-                                  onClick={handleProgressStep}
+                                  onClick={() => {
+                                    if (authMode === 'signIn') {
+                                      void handlePasswordSignIn();
+                                      return;
+                                    }
+                                    handleProgressStep();
+                                  }}
                                   size="icon"
-                                  aria-label="Submit password"
+                                  aria-label={authMode === 'signIn' ? 'Sign in' : 'Continue to confirm password'}
                                   contentClassName="text-foreground/80 hover:text-foreground"
                                 >
                                   <ArrowRight className="h-5 w-5" />
@@ -981,7 +1079,7 @@ export const AuthComponent = ({
             </AnimatePresence>
 
             <AnimatePresence>
-              {authStep === 'confirmPassword' ? (
+              {authStep === 'confirmPassword' && authMode === 'signUp' ? (
                 <BlurFade key="confirm-password-field" className="w-full">
                   <div className="relative w-full">
                     <AnimatePresence>
