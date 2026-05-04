@@ -775,27 +775,25 @@ export const AuthComponent = ({
             className="pointer-events-auto relative flex w-full max-w-[340px] flex-col items-center gap-8 p-4"
           >
           <div className="flex w-full items-center justify-center">
-            <div className="inline-flex rounded-full border border-white/10 bg-black/45 p-1">
-              <button
+            <div className="flex items-center justify-center gap-2">
+              <GlassButton
                 type="button"
+                size="sm"
                 onClick={() => switchAuthMode('signIn')}
-                className={cn(
-                  'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-                  authMode === 'signIn' ? 'bg-white text-black' : 'text-zinc-300 hover:text-white'
-                )}
+                className={cn(authMode === 'signIn' ? 'scale-[0.98]' : 'opacity-80')}
+                contentClassName={cn('font-semibold', authMode === 'signIn' ? 'text-white' : 'text-zinc-300')}
               >
                 Sign in
-              </button>
-              <button
+              </GlassButton>
+              <GlassButton
                 type="button"
+                size="sm"
                 onClick={() => switchAuthMode('signUp')}
-                className={cn(
-                  'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-                  authMode === 'signUp' ? 'bg-white text-black' : 'text-zinc-300 hover:text-white'
-                )}
+                className={cn(authMode === 'signUp' ? 'scale-[0.98]' : 'opacity-80')}
+                contentClassName={cn('font-semibold', authMode === 'signUp' ? 'text-white' : 'text-zinc-300')}
               >
                 Sign up
-              </button>
+              </GlassButton>
             </div>
           </div>
           <AnimatePresence mode="wait">
