@@ -1,5 +1,5 @@
 import { Children, useCallback, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 
 type AnimationEasing = 'spring' | 'easeIn' | 'easeOut' | 'easeInOut' | 'linear';
 
@@ -22,6 +22,27 @@ type ScrollScatterProps = {
   animationEasing?: AnimationEasing;
   style?: CSSProperties;
 };
+
+function RevealWord({
+  children,
+  progress,
+  range
+}: {
+  children: ReactNode;
+  progress: MotionValue<number>;
+  range: [number, number];
+}) {
+  const opacity = useTransform(progress, range, [0, 1]);
+
+  return (
+    <span className="relative mx-1.5 lg:mx-2">
+      <span className="absolute opacity-30">{children}</span>
+      <motion.span style={{ opacity }} className="text-white">
+        {children}
+      </motion.span>
+    </span>
+  );
+}
 
 function ScrollScatter({
   children,
@@ -186,7 +207,20 @@ function ScrollScatter({
   );
 }
 
-export default function ScrollFadeProfileSuggestions({ items }: { items: ProfileSuggestionItem[] }) {
+export default function ScrollFadeProfileSuggestions({
+  items,
+  bottomText
+}: {
+  items: ProfileSuggestionItem[];
+  bottomText?: string;
+}) {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const phraseRef = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress: textProgress } = useScroll({
+    target: phraseRef,
+    offset: ['start end', 'end start']
+  });
+  const textWords = (bottomText ?? '').split(' ').filter(Boolean);
   const children = items.slice(0, 8).map((item, index) => (
     <div key={item.id} className="h-full w-full bg-zinc-900">
       <img src={item.avatarUrl} alt={item.displayName || `Suggestion ${index + 1}`} className="h-full w-full object-cover" />
@@ -194,7 +228,7 @@ export default function ScrollFadeProfileSuggestions({ items }: { items: Profile
   ));
 
   return (
-    <section className="relative h-[220vh] overflow-hidden bg-black">
+    <section ref={sectionRef} className="relative h-[165vh] overflow-hidden bg-black">
       <div className="sticky top-0 h-screen">
         <ScrollScatter
           scatterDistance={100}
@@ -209,6 +243,25 @@ export default function ScrollFadeProfileSuggestions({ items }: { items: Profile
         >
           {children}
         </ScrollScatter>
+
+        {bottomText ? (
+          <div
+            ref={phraseRef}
+            className="pointer-events-none absolute inset-x-0 -bottom-[14vh] z-20 mx-auto flex max-w-5xl justify-center px-6"
+          >
+            <p className="flex flex-wrap justify-center text-center text-[clamp(1.6rem,3.3vw,3rem)] leading-tight font-semibold tracking-[-0.02em] text-white/90">
+              {textWords.map((word, index) => {
+                const start = index / textWords.length;
+                const end = start + 1 / textWords.length;
+                return (
+                  <RevealWord key={`${word}-${index}`} progress={textProgress} range={[start, end]}>
+                    {word}
+                  </RevealWord>
+                );
+              })}
+            </p>
+          </div>
+        ) : null}
       </div>
     </section>
   );

@@ -321,9 +321,9 @@ export default function DomeGalleryPage() {
   useEffect(() => {
     setIsDiscoverVisible(prev => {
       if (prev) {
-        return scrollProgress > 0.68;
+        return scrollProgress > 0.56;
       }
-      return scrollProgress >= 0.8;
+      return scrollProgress >= 0.66;
     });
   }, [scrollProgress]);
 
@@ -339,11 +339,11 @@ export default function DomeGalleryPage() {
         style={{ pointerEvents: 'none' }}
       >
         <div className="pointer-events-auto">
-          <CraftButton asChild>
+          <CraftButton asChild className="text-white">
             <Link to="/community">
-              <CraftButtonLabel>Discover</CraftButtonLabel>
+              <CraftButtonLabel className="text-white">Discover</CraftButtonLabel>
               <CraftButtonIcon>
-                <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+                <ArrowUpRightIcon className="size-3 stroke-2 text-white transition-transform duration-500 group-hover:rotate-45" />
               </CraftButtonIcon>
             </Link>
           </CraftButton>

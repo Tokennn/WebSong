@@ -60,6 +60,64 @@ to authenticated
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+create or replace function public.get_public_about_profile(target_user uuid)
+returns table (
+  user_id uuid,
+  display_name text,
+  headline text,
+  contact_label text,
+  contact_url text,
+  about_intro text,
+  about_body text,
+  location_label text,
+  mailing_title text,
+  mailing_cta text,
+  avatar_url text,
+  youtube_url text,
+  github_url text,
+  tiktok_url text,
+  x_url text
+)
+language sql
+security definer
+set search_path = public, auth
+as $$
+  select
+    u.id as user_id,
+    coalesce(
+      nullif(ap.display_name, ''),
+      nullif(u.raw_user_meta_data ->> 'full_name', ''),
+      nullif(u.raw_user_meta_data ->> 'name', ''),
+      split_part(coalesce(u.email, ''), '@', 1),
+      'WebSong User'
+    ) as display_name,
+    coalesce(nullif(ap.headline, ''), 'Who you are ?') as headline,
+    coalesce(nullif(ap.contact_label, ''), 'Contact me') as contact_label,
+    coalesce(nullif(ap.contact_url, ''), '#') as contact_url,
+    coalesce(nullif(ap.about_intro, ''), 'Describe You !') as about_intro,
+    coalesce(nullif(ap.about_body, ''), '') as about_body,
+    coalesce(nullif(ap.location_label, ''), 'put your location here') as location_label,
+    coalesce(nullif(ap.mailing_title, ''), 'Join my mailing list') as mailing_title,
+    coalesce(nullif(ap.mailing_cta, ''), 'Join the list') as mailing_cta,
+    coalesce(
+      nullif(ap.avatar_url, ''),
+      nullif(u.raw_user_meta_data ->> 'avatar_url', ''),
+      nullif(u.raw_user_meta_data ->> 'picture', ''),
+      'https://api.dicebear.com/8.x/lorelei-neutral/svg?seed=' || substring(u.id::text from 1 for 12)
+    ) as avatar_url,
+    coalesce(nullif(ap.youtube_url, ''), '#') as youtube_url,
+    coalesce(nullif(ap.github_url, ''), '#') as github_url,
+    coalesce(nullif(ap.tiktok_url, ''), '#') as tiktok_url,
+    coalesce(nullif(ap.x_url, ''), '#') as x_url
+  from auth.users u
+  join public.published_profiles pp on pp.user_id = u.id
+  left join public.about_profiles ap on ap.user_id = u.id
+  where u.id = target_user
+  limit 1;
+$$;
+
+grant execute on function public.get_public_about_profile(uuid) to anon, authenticated;
+
 do $$
 begin
   if exists (

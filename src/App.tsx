@@ -100,6 +100,14 @@ function App() {
           }
         />
         <Route
+          path="/about-you/:userId"
+          element={
+            <AnimatedPage>
+              <AboutYouPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
           path="/sign-in"
           element={
             <AnimatedPage>

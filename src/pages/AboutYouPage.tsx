@@ -4,10 +4,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
 import { FiMapPin } from 'react-icons/fi';
 import { SiGithub, SiInstagram, SiTiktok, SiX } from 'react-icons/si';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { twMerge } from 'tailwind-merge';
 import { Globe } from '@/components/ui/cobe-globe';
 import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
+import { improveAvatarUrlQuality } from '@/lib/avatar';
 import { supabase } from '@/lib/supabase';
 
 type BlockProps = ComponentProps<typeof motion.div>;
@@ -47,6 +48,17 @@ type AboutProfileRow = {
   github_url: string;
   tiktok_url: string;
   x_url: string;
+};
+
+type PublicProfileSeed = {
+  id?: string;
+  displayName?: string;
+  headline?: string;
+  avatarUrl?: string;
+};
+
+type AboutYouLocationState = {
+  profile?: PublicProfileSeed;
 };
 
 const LEGACY_DEFAULT_HEADLINE = 'I build cool websites like this one.';
@@ -158,7 +170,7 @@ function normalizeProfile(row: Partial<AboutProfileRow> | null | undefined, fall
     locationLabel: row.location_label || DEFAULT_PROFILE.locationLabel,
     mailingTitle: row.mailing_title || DEFAULT_PROFILE.mailingTitle,
     mailingCta: row.mailing_cta || DEFAULT_PROFILE.mailingCta,
-    avatarUrl: row.avatar_url || DEFAULT_PROFILE.avatarUrl,
+    avatarUrl: improveAvatarUrlQuality(row.avatar_url || DEFAULT_PROFILE.avatarUrl),
     youtubeUrl: row.youtube_url || DEFAULT_PROFILE.youtubeUrl,
     githubUrl: row.github_url || DEFAULT_PROFILE.githubUrl,
     tiktokUrl: row.tiktok_url || DEFAULT_PROFILE.tiktokUrl,
@@ -178,7 +190,7 @@ function toRow(profile: AboutProfile, userId: string): AboutProfileRow {
     location_label: profile.locationLabel,
     mailing_title: profile.mailingTitle,
     mailing_cta: profile.mailingCta,
-    avatar_url: profile.avatarUrl,
+    avatar_url: improveAvatarUrlQuality(profile.avatarUrl),
     youtube_url: profile.youtubeUrl,
     github_url: profile.githubUrl,
     tiktok_url: profile.tiktokUrl,
@@ -211,7 +223,8 @@ function fallbackAvatarUrl(user: User | null): string {
     typeof metadata.image === 'string' ? metadata.image : ''
   ];
 
-  return avatarCandidates.find(candidate => candidate.startsWith('http')) || DEFAULT_PROFILE.avatarUrl;
+  const avatar = avatarCandidates.find(candidate => candidate.startsWith('http')) || DEFAULT_PROFILE.avatarUrl;
+  return improveAvatarUrlQuality(avatar);
 }
 
 function isMissingTableError(error: { message?: string; code?: string } | null): boolean {
@@ -221,6 +234,12 @@ function isMissingTableError(error: { message?: string; code?: string } | null):
     message.includes('about_profiles') &&
     (message.includes('does not exist') || message.includes('relation') || message.includes('schema cache'))
   );
+}
+
+function isMissingPublicProfileRpcError(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  const message = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
+  return message.includes('get_public_about_profile');
 }
 
 function Block({ className, ...rest }: BlockProps) {
@@ -617,6 +636,8 @@ function LocationBlock({
 }
 
 export default function AboutYouPage() {
+  const { userId: routeUserId } = useParams<{ userId?: string }>();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AboutProfile>(DEFAULT_PROFILE);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -629,16 +650,20 @@ export default function AboutYouPage() {
   const saveTimeoutRef = useRef<number | null>(null);
   const savedBadgeTimeoutRef = useRef<number | null>(null);
 
-  const canPersist = Boolean(user && dbReady);
+  const routeState = (location.state ?? null) as AboutYouLocationState | null;
+  const profileSeed = routeState?.profile;
+  const isViewingSharedProfile = Boolean(routeUserId && routeUserId !== user?.id);
+  const canPersist = Boolean(user && dbReady && !isViewingSharedProfile);
 
   const saveStateLabel = useMemo(() => {
+    if (isViewingSharedProfile) return 'Lecture seule (profil public)';
     if (!user) return 'Connecte-toi pour sauvegarder';
     if (!dbReady) return 'Configuration DB requise';
     if (saveState === 'saving') return 'Sauvegarde...';
     if (saveState === 'saved') return 'Sauvegardé';
     if (saveState === 'error') return 'Erreur de sauvegarde';
     return '';
-  }, [dbReady, saveState, user]);
+  }, [dbReady, isViewingSharedProfile, saveState, user]);
 
   const locationMarker = useMemo(() => {
     const label = profile.locationLabel.trim() || 'Paris';
@@ -664,11 +689,71 @@ export default function AboutYouPage() {
   }, []);
 
   useEffect(() => {
-    const name = fallbackDisplayName(user);
-    const avatar = fallbackAvatarUrl(user);
+    const seededDisplayName = profileSeed?.displayName?.trim() || DEFAULT_PROFILE.displayName;
+    const seededAvatar = improveAvatarUrlQuality(profileSeed?.avatarUrl || DEFAULT_PROFILE.avatarUrl);
+
+    const ownDisplayName = fallbackDisplayName(user);
+    const ownAvatar = fallbackAvatarUrl(user);
+
+    if (isViewingSharedProfile && routeUserId) {
+      let active = true;
+      setLoadingProfile(true);
+      setInfoMessage(null);
+      setDbReady(true);
+
+      void supabase
+        .rpc('get_public_about_profile', { target_user: routeUserId })
+        .then(({ data, error }) => {
+          if (!active) return;
+
+          if (error) {
+            if (isMissingPublicProfileRpcError(error)) {
+              setInfoMessage("RPC 'get_public_about_profile' absente. Exécute docs/about_profiles.sql sur Supabase.");
+            } else {
+              setInfoMessage(error.message);
+            }
+
+            const fallback = {
+              ...DEFAULT_PROFILE,
+              displayName: seededDisplayName,
+              headline: profileSeed?.headline?.trim() || DEFAULT_PROFILE.headline,
+              avatarUrl: seededAvatar
+            };
+            setProfile(fallback);
+            lastSyncedJsonRef.current = JSON.stringify(fallback);
+            setLoadingProfile(false);
+            return;
+          }
+
+          const row = (data?.[0] as Partial<AboutProfileRow> | undefined) ?? null;
+          if (!row) {
+            const fallback = {
+              ...DEFAULT_PROFILE,
+              displayName: seededDisplayName,
+              headline: profileSeed?.headline?.trim() || DEFAULT_PROFILE.headline,
+              avatarUrl: seededAvatar
+            };
+            setProfile(fallback);
+            lastSyncedJsonRef.current = JSON.stringify(fallback);
+            setInfoMessage('Ce profil n’est pas publié ou n’a pas encore de fiche publique.');
+            setLoadingProfile(false);
+            return;
+          }
+
+          const normalized = normalizeProfile(row, seededDisplayName);
+          if (!row.avatar_url) normalized.avatarUrl = seededAvatar;
+          setProfile(normalized);
+          lastSyncedJsonRef.current = JSON.stringify(normalized);
+          setLoadingProfile(false);
+        });
+
+      return () => {
+        active = false;
+      };
+    }
 
     if (!user) {
-      const next = { ...DEFAULT_PROFILE, displayName: name, avatarUrl: avatar };
+      const next = { ...DEFAULT_PROFILE, displayName: ownDisplayName, avatarUrl: ownAvatar };
       setProfile(next);
       lastSyncedJsonRef.current = JSON.stringify(next);
       setLoadingProfile(false);
@@ -696,7 +781,7 @@ export default function AboutYouPage() {
             setInfoMessage(error.message);
           }
 
-          const fallback = { ...DEFAULT_PROFILE, displayName: name, avatarUrl: avatar };
+          const fallback = { ...DEFAULT_PROFILE, displayName: ownDisplayName, avatarUrl: ownAvatar };
           setProfile(fallback);
           lastSyncedJsonRef.current = JSON.stringify(fallback);
           setLoadingProfile(false);
@@ -705,8 +790,8 @@ export default function AboutYouPage() {
 
         setDbReady(true);
         const row = (data?.[0] as Partial<AboutProfileRow> | undefined) ?? null;
-        const normalized = normalizeProfile(row, name);
-        if (!row?.avatar_url) normalized.avatarUrl = avatar;
+        const normalized = normalizeProfile(row, ownDisplayName);
+        if (!row?.avatar_url) normalized.avatarUrl = ownAvatar;
         setProfile(normalized);
         lastSyncedJsonRef.current = JSON.stringify(normalized);
         setLoadingProfile(false);
@@ -715,10 +800,10 @@ export default function AboutYouPage() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [isViewingSharedProfile, profileSeed?.avatarUrl, profileSeed?.displayName, profileSeed?.headline, routeUserId, user]);
 
   useEffect(() => {
-    if (!user || !dbReady) return;
+    if (!user || !dbReady || isViewingSharedProfile) return;
 
     const channel = supabase
       .channel(`about-profile-${user.id}`)
@@ -749,7 +834,7 @@ export default function AboutYouPage() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [dbReady, user]);
+  }, [dbReady, isViewingSharedProfile, user]);
 
   useEffect(() => {
     if (!canPersist || loadingProfile) return;

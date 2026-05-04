@@ -572,8 +572,9 @@ export default function CreatePage() {
   );
 
   return (
-    <main className="relative h-[100dvh] overflow-hidden bg-black text-white">
-      <div className="relative z-30 h-full w-full">
+    <main className="min-h-screen bg-black text-white">
+      <section className="relative h-[100dvh] overflow-hidden">
+        <div className="relative z-30 h-full w-full">
         <div className="pointer-events-none absolute top-6 left-1/2 z-40 -translate-x-1/2 sm:top-10">
           <div className="pointer-events-auto flex items-center gap-3">
             <CraftButton
@@ -630,7 +631,9 @@ export default function CreatePage() {
             {spotifyError ? <p className="m-0 text-red-300">{spotifyError}</p> : null}
           </div>
         ) : null}
-      </div>
+        </div>
+      </section>
+
     </main>
   );
 }
