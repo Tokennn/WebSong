@@ -1,29 +1,29 @@
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import Lenis from 'lenis';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
-import CommunityPage from '@/pages/CommunityPage';
-import DomeGalleryPage from '@/pages/DomeGalleryPage';
-import HomePage from '@/pages/HomePage';
-import AboutYouPage from '@/pages/AboutYouPage';
-import PostAuthPage from '@/pages/PostAuthPage';
-import SignInPage from '@/pages/SignInPage';
-import SignUpPage from '@/pages/SignUpPage';
-import CreatePage from '@/pages/CreatePage';
-import ProfileSuggestionsPage from '@/pages/ProfileSuggestionsPage';
+const CommunityPage = lazy(() => import('@/pages/CommunityPage'));
+const DomeGalleryPage = lazy(() => import('@/pages/DomeGalleryPage'));
+const HomePage = lazy(() => import('@/pages/HomePage'));
+const AboutYouPage = lazy(() => import('@/pages/AboutYouPage'));
+const PostAuthPage = lazy(() => import('@/pages/PostAuthPage'));
+const SignInPage = lazy(() => import('@/pages/SignInPage'));
+const SignUpPage = lazy(() => import('@/pages/SignUpPage'));
+const CreatePage = lazy(() => import('@/pages/CreatePage'));
+const ProfileSuggestionsPage = lazy(() => import('@/pages/ProfileSuggestionsPage'));
 
-function AnimatedPage({ children }: { children: ReactNode }) {
+function AnimatedPage({ children, reducedMotion }: { children: ReactNode; reducedMotion: boolean }) {
   return (
     <motion.div
       initial={false}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, filter: 'blur(4px)' }}
+      exit={{ opacity: 0 }}
       transition={{
-        duration: 0.5,
+        duration: reducedMotion ? 0.12 : 0.3,
         ease: [0.22, 1, 0.36, 1]
       }}
-      className="min-h-screen will-change-[opacity]"
+      className="min-h-screen min-h-dvh will-change-[opacity]"
     >
       {children}
     </motion.div>
@@ -33,6 +33,11 @@ function AnimatedPage({ children }: { children: ReactNode }) {
 function App() {
   const location = useLocation();
   const routeKey = location.pathname;
+  const shouldReduceAnimations = useMemo(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    return prefersReducedMotion || isTouchDevice;
+  }, []);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -66,90 +71,92 @@ function App() {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-x-clip bg-white">
-      <Routes location={location} key={routeKey}>
-        <Route
-          path="/"
-          element={
-            <AnimatedPage>
-              <HomePage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/dome-gallery"
-          element={
-            <AnimatedPage>
-              <DomeGalleryPage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/community"
-          element={
-            <AnimatedPage>
-              <CommunityPage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/about-you"
-          element={
-            <AnimatedPage>
-              <AboutYouPage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/about-you/:userId"
-          element={
-            <AnimatedPage>
-              <AboutYouPage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/sign-in"
-          element={
-            <AnimatedPage>
-              <SignInPage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/sign-up"
-          element={
-            <AnimatedPage>
-              <SignUpPage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/post-auth"
-          element={
-            <AnimatedPage>
-              <PostAuthPage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/create"
-          element={
-            <AnimatedPage>
-              <CreatePage />
-            </AnimatedPage>
-          }
-        />
-        <Route
-          path="/profile-suggestions"
-          element={
-            <AnimatedPage>
-              <ProfileSuggestionsPage />
-            </AnimatedPage>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+    <div className="relative min-h-screen min-h-dvh overflow-x-clip bg-white">
+      <Suspense fallback={<div className="min-h-screen min-h-dvh w-full bg-white" />}>
+        <Routes location={location} key={routeKey}>
+          <Route
+            path="/"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <HomePage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/dome-gallery"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <DomeGalleryPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/community"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <CommunityPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/about-you"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <AboutYouPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/about-you/:userId"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <AboutYouPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/sign-in"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <SignInPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/sign-up"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <SignUpPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/post-auth"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <PostAuthPage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/create"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <CreatePage />
+              </AnimatedPage>
+            }
+          />
+          <Route
+            path="/profile-suggestions"
+            element={
+              <AnimatedPage reducedMotion={shouldReduceAnimations}>
+                <ProfileSuggestionsPage />
+              </AnimatedPage>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </div>
   );
 }

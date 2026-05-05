@@ -174,8 +174,14 @@ const RippleGrid = ({
     const container = containerRef.current;
     if (!container) return;
 
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isLowPowerDevice = (nav.deviceMemory ?? 8) <= 4 || navigator.hardwareConcurrency <= 4;
+    const useLowQuality = isTouchDevice || prefersReducedMotion || isLowPowerDevice;
+
     const renderer = new Renderer({
-      dpr: Math.min(window.devicePixelRatio, 2),
+      dpr: Math.min(window.devicePixelRatio, useLowQuality ? 1 : 1.5),
       alpha: true
     });
     const { gl } = renderer;
@@ -199,7 +205,7 @@ const RippleGrid = ({
       glowIntensity: { value: glowIntensity },
       opacity: { value: opacity },
       gridRotation: { value: gridRotation },
-      mouseInteraction: { value: mouseInteraction },
+      mouseInteraction: { value: mouseInteraction && !isTouchDevice && !prefersReducedMotion },
       mousePosition: { value: [0.5, 0.5] },
       mouseInfluence: { value: 0 },
       mouseInteractionRadius: { value: mouseInteractionRadius }
@@ -245,13 +251,26 @@ const RippleGrid = ({
     };
 
     window.addEventListener('resize', resize);
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerleave', handlePointerLeave);
-    window.addEventListener('blur', handlePointerLeave);
+    if (uniforms.mouseInteraction.value) {
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerleave', handlePointerLeave);
+      window.addEventListener('blur', handlePointerLeave);
+    }
     resize();
 
     let animationFrameId = 0;
+    const minFrameDuration = useLowQuality ? 1000 / 30 : 1000 / 60;
+    let lastFrameTime = 0;
     const render = (time: number) => {
+      if (document.hidden) {
+        animationFrameId = requestAnimationFrame(render);
+        return;
+      }
+      if (time - lastFrameTime < minFrameDuration) {
+        animationFrameId = requestAnimationFrame(render);
+        return;
+      }
+      lastFrameTime = time;
       uniforms.iTime.value = time * 0.001;
 
       const lerpFactor = 0.1;
@@ -282,6 +301,8 @@ const RippleGrid = ({
 
   useEffect(() => {
     if (!uniformsRef.current) return;
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     uniformsRef.current.enableRainbow.value = enableRainbow;
     uniformsRef.current.gridColor.value = hexToRgb(gridColor);
@@ -293,7 +314,7 @@ const RippleGrid = ({
     uniformsRef.current.glowIntensity.value = glowIntensity;
     uniformsRef.current.opacity.value = opacity;
     uniformsRef.current.gridRotation.value = gridRotation;
-    uniformsRef.current.mouseInteraction.value = mouseInteraction;
+    uniformsRef.current.mouseInteraction.value = mouseInteraction && !isTouchDevice && !prefersReducedMotion;
     uniformsRef.current.mouseInteractionRadius.value = mouseInteractionRadius;
   }, [
     enableRainbow,

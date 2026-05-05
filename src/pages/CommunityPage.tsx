@@ -64,6 +64,7 @@ const COMMUNITY_SECTIONS: CommunitySection[] = [
 const COMMUNITY_MENU_ITEMS: StaggeredMenuItem[] = [
   { label: 'Home', ariaLabel: 'Go to home page', link: '/' },
   { label: 'Dome', ariaLabel: 'Go to dome page', link: '/dome-gallery' },
+  { label: 'Sign-up', ariaLabel: 'Go to sign up page', link: '/sign-up' },
   { label: 'Sign-in', ariaLabel: 'Go to sign in page', link: '/sign-in' }
 ];
 
@@ -285,7 +286,7 @@ export default function CommunityPage() {
     () =>
       authUser
         ? [
-            ...COMMUNITY_MENU_ITEMS.filter(item => item.link !== '/sign-in'),
+            ...COMMUNITY_MENU_ITEMS.filter(item => item.link !== '/sign-in' && item.link !== '/sign-up'),
             ...COMMUNITY_AUTH_ONLY_MENU_ITEMS,
             { label: 'Déconnexion', ariaLabel: 'Sign out', link: '/sign-in', onClick: handleSignOut }
           ]

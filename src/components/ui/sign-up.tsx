@@ -589,17 +589,6 @@ export const AuthComponent = ({
     if (authStep === 'password') setAuthStep('email');
   };
 
-  const switchAuthMode = (nextMode: 'signIn' | 'signUp') => {
-    if (nextMode === authMode) return;
-    setAuthMode(nextMode);
-    setAuthStep('email');
-    setPassword('');
-    setConfirmPassword('');
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-    if (modalStatus !== 'closed') closeModal();
-  };
-
   const closeModal = () => {
     setModalStatus('closed');
     setModalErrorMessage('');
@@ -702,7 +691,7 @@ export const AuthComponent = ({
   );
 
   return (
-    <div className={cn('dark flex min-h-screen w-screen flex-col bg-black text-white', className)}>
+    <div className={cn('dark flex min-h-screen min-h-dvh w-full flex-col bg-black text-white', className)}>
       <style>{`
         input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:none!important}
         input[type="password"]::-webkit-credentials-auto-fill-button,input[type="password"]::-webkit-strong-password-auto-fill-button{display:none!important}
@@ -774,28 +763,6 @@ export const AuthComponent = ({
             disabled={modalStatus !== 'closed'}
             className="pointer-events-auto relative flex w-full max-w-[340px] flex-col items-center gap-8 p-4"
           >
-          <div className="flex w-full items-center justify-center">
-            <div className="flex items-center justify-center gap-2">
-              <GlassButton
-                type="button"
-                size="sm"
-                onClick={() => switchAuthMode('signIn')}
-                className={cn(authMode === 'signIn' ? 'scale-[0.98]' : 'opacity-80')}
-                contentClassName={cn('font-semibold', authMode === 'signIn' ? 'text-white' : 'text-zinc-300')}
-              >
-                Sign in
-              </GlassButton>
-              <GlassButton
-                type="button"
-                size="sm"
-                onClick={() => switchAuthMode('signUp')}
-                className={cn(authMode === 'signUp' ? 'scale-[0.98]' : 'opacity-80')}
-                contentClassName={cn('font-semibold', authMode === 'signUp' ? 'text-white' : 'text-zinc-300')}
-              >
-                Sign up
-              </GlassButton>
-            </div>
-          </div>
           <AnimatePresence mode="wait">
             {authStep === 'email' ? (
               <motion.div

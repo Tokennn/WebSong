@@ -36,14 +36,20 @@ export function SplineSceneBasic() {
           <p className="mt-2 text-sm text-zinc-300">
             Explore interactive scenes, then continue to your community profile.
           </p>
-          <div className="mt-4 flex gap-2">
-            <CraftButton asChild className="h-11 flex-1 rounded-xl">
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <CraftButton asChild className="h-11 rounded-xl">
               <Link to="/about-you">
-                <CraftButtonLabel>About You</CraftButtonLabel>
+                <CraftButtonLabel>About</CraftButtonLabel>
                 <CraftButtonIcon>↗</CraftButtonIcon>
               </Link>
             </CraftButton>
-            <CraftButton asChild className="h-11 flex-1 rounded-xl">
+            <CraftButton asChild className="h-11 rounded-xl">
+              <Link to="/create">
+                <CraftButtonLabel>Create</CraftButtonLabel>
+                <CraftButtonIcon>↗</CraftButtonIcon>
+              </Link>
+            </CraftButton>
+            <CraftButton asChild className="h-11 rounded-xl">
               <Link to="/community">
                 <CraftButtonLabel>Community</CraftButtonLabel>
                 <CraftButtonIcon>↗</CraftButtonIcon>

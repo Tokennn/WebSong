@@ -154,11 +154,18 @@ const Grainient: React.FC<GrainientProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isLowPowerDevice = (nav.deviceMemory ?? 8) <= 4 || navigator.hardwareConcurrency <= 4;
+    const useLowQuality = isTouchDevice || prefersReducedMotion || isLowPowerDevice;
+    const shouldAnimate = (Math.abs(timeSpeed) > 0.0001 || grainAnimated) && !prefersReducedMotion;
+
     const renderer = new Renderer({
       webgl: 2,
       alpha: true,
       antialias: false,
-      dpr: Math.min(window.devicePixelRatio || 1, 2)
+      dpr: Math.min(window.devicePixelRatio || 1, useLowQuality ? 1 : 1.5)
     });
 
     const gl = renderer.gl;
@@ -220,15 +227,32 @@ const Grainient: React.FC<GrainientProps> = ({
 
     let raf = 0;
     const t0 = performance.now();
+    const minFrameDuration = useLowQuality ? 1000 / 30 : 1000 / 60;
+    let lastFrameTime = 0;
     const loop = (t: number) => {
+      if (document.hidden) {
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+      if (t - lastFrameTime < minFrameDuration) {
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+      lastFrameTime = t;
       (program.uniforms.iTime as { value: number }).value = (t - t0) * 0.001;
       renderer.render({ scene: mesh });
       raf = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(loop);
+
+    if (shouldAnimate) {
+      raf = requestAnimationFrame(loop);
+    } else {
+      (program.uniforms.iTime as { value: number }).value = 0;
+      renderer.render({ scene: mesh });
+    }
 
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
       try {
         container.removeChild(canvas);
