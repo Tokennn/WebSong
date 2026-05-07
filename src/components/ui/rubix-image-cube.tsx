@@ -72,6 +72,7 @@ export default function RubixImageCube({ items }: RubixImageCubeProps) {
     startX: 0,
     startY: 0,
     moved: false,
+    captured: false,
     startRotateX: 0,
     startRotateY: 0
   });
@@ -110,9 +111,9 @@ export default function RubixImageCube({ items }: RubixImageCubeProps) {
     dragStateRef.current.startX = event.clientX;
     dragStateRef.current.startY = event.clientY;
     dragStateRef.current.moved = false;
+    dragStateRef.current.captured = false;
     dragStateRef.current.startRotateX = dragRotateX.get();
     dragStateRef.current.startRotateY = dragRotateY.get();
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -125,19 +126,28 @@ export default function RubixImageCube({ items }: RubixImageCubeProps) {
 
     if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
       state.moved = true;
+      if (!state.captured) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        state.captured = true;
+      }
     }
+
+    if (!state.moved) return;
 
     const nextRotateY = state.startRotateY + deltaX * sensitivity;
     const nextRotateX = Math.max(-90, Math.min(90, state.startRotateX - deltaY * sensitivity));
-
     dragRotateY.set(nextRotateY);
     dragRotateX.set(nextRotateX);
   };
 
   const stopDragging = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (dragStateRef.current.pointerId !== event.pointerId) return;
+    if (dragStateRef.current.captured && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     dragStateRef.current.active = false;
     dragStateRef.current.pointerId = -1;
+    dragStateRef.current.captured = false;
   };
 
   const handleClickCapture = (event: ReactMouseEvent<HTMLDivElement>) => {
