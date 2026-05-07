@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { User } from '@supabase/supabase-js';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import communityFirstImage from '@/assets/community-first.png';
 import communitySecondImage from '@/assets/community-second.png';
@@ -234,18 +235,33 @@ function OverlayCopy({ subheading, heading }: { subheading: string; heading: str
 }
 
 function CommunityContent({ title, textA, textB, cta }: Omit<CommunitySection, 'imgUrl' | 'subheading' | 'heading'>) {
+  const ctaTo = cta === 'Start discovering' ? '/profile-suggestions' : undefined;
+
   return (
     <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 pb-24 pt-12 md:grid-cols-12">
       <h2 className="col-span-1 text-3xl font-semibold text-neutral-900 md:col-span-4">{title}</h2>
       <div className="col-span-1 md:col-span-8">
         <p className="mb-5 text-xl text-neutral-700 md:text-2xl">{renderGradientPhrases(textA)}</p>
         <p className="mb-8 text-xl text-neutral-700 md:text-2xl">{renderGradientPhrases(textB)}</p>
-        <CraftButton size="lg" className="h-auto w-full rounded-xl px-8 py-4 text-lg md:w-fit">
-          <CraftButtonLabel>{cta}</CraftButtonLabel>
-          <CraftButtonIcon>
-            <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
-          </CraftButtonIcon>
-        </CraftButton>
+        {cta !== 'Join conversation' ? (
+          ctaTo ? (
+            <CraftButton asChild size="lg" className="h-auto w-full rounded-xl px-8 py-4 text-lg md:w-fit">
+              <Link to={ctaTo}>
+                <CraftButtonLabel>{cta}</CraftButtonLabel>
+                <CraftButtonIcon>
+                  <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+                </CraftButtonIcon>
+              </Link>
+            </CraftButton>
+          ) : (
+            <CraftButton size="lg" className="h-auto w-full rounded-xl px-8 py-4 text-lg md:w-fit">
+              <CraftButtonLabel>{cta}</CraftButtonLabel>
+              <CraftButtonIcon>
+                <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+              </CraftButtonIcon>
+            </CraftButton>
+          )
+        ) : null}
       </div>
     </div>
   );
