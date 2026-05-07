@@ -46,6 +46,13 @@ type PublishedProfileRow = {
   user_id: string;
 };
 
+type CustomSection = {
+  id: string;
+  title: string;
+  draftItem: string;
+  items: string[];
+};
+
 const DEFAULT_CARD_ITEMS: CardItem[] = [
   {
     image: 'https://framerusercontent.com/images/9R8HmP4k64b7LiIOGJZKnCoGLAI.jpeg?width=1200&height=1600',
@@ -180,6 +187,8 @@ export default function CreatePage() {
 
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [customSections, setCustomSections] = useState<CustomSection[]>([]);
 
   const spotifyAvailable = isSpotifyConfigured();
 
@@ -492,6 +501,67 @@ export default function CreatePage() {
     navigate('/profile-suggestions');
   }, [navigate, spotifyConnected, user]);
 
+  const handleCreateCustomSection = useCallback(() => {
+    if (!user) {
+      setInfoMessage('Connecte-toi à ton compte WebSong pour créer des sections personnalisées.');
+      return;
+    }
+
+    const trimmedTitle = newSectionTitle.trim();
+    setCustomSections(current => {
+      const fallbackTitle = `Nouvelle section ${current.length + 1}`;
+      return [
+        ...current,
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          title: trimmedTitle || fallbackTitle,
+          draftItem: '',
+          items: []
+        }
+      ];
+    });
+    setNewSectionTitle('');
+  }, [newSectionTitle, user]);
+
+  const handleSectionTitleChange = useCallback((sectionId: string, value: string) => {
+    setCustomSections(current => current.map(section => (section.id === sectionId ? { ...section, title: value } : section)));
+  }, []);
+
+  const handleSectionDraftChange = useCallback((sectionId: string, value: string) => {
+    setCustomSections(current => current.map(section => (section.id === sectionId ? { ...section, draftItem: value } : section)));
+  }, []);
+
+  const handleAddSectionItem = useCallback((sectionId: string) => {
+    setCustomSections(current =>
+      current.map(section => {
+        if (section.id !== sectionId) return section;
+        const nextItem = section.draftItem.trim();
+        if (!nextItem) return section;
+        return {
+          ...section,
+          items: [...section.items, nextItem],
+          draftItem: ''
+        };
+      })
+    );
+  }, []);
+
+  const handleRemoveSectionItem = useCallback((sectionId: string, itemIndex: number) => {
+    setCustomSections(current =>
+      current.map(section => {
+        if (section.id !== sectionId) return section;
+        return {
+          ...section,
+          items: section.items.filter((_, index) => index !== itemIndex)
+        };
+      })
+    );
+  }, []);
+
+  const handleRemoveSection = useCallback((sectionId: string) => {
+    setCustomSections(current => current.filter(section => section.id !== sectionId));
+  }, []);
+
   const activeCardItems = useMemo(() => {
     const hasCustomSlots = slots.some(Boolean);
     if (hasCustomSlots) {
@@ -633,6 +703,104 @@ export default function CreatePage() {
         ) : null}
         </div>
       </section>
+
+      {user ? (
+        <section className="border-t border-white/10 bg-[#050505] px-4 py-14 sm:px-8">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <label htmlFor="new-custom-section" className="mb-2 block text-xs tracking-[0.18em] text-white/60 uppercase">
+                  Nouvelle section
+                </label>
+                <input
+                  id="new-custom-section"
+                  value={newSectionTitle}
+                  onChange={event => setNewSectionTitle(event.target.value)}
+                  placeholder="Ex: Artistes à suivre, Albums du moment, etc."
+                  className="h-12 w-full rounded-2xl border border-white/15 bg-white/5 px-4 text-sm text-white outline-none transition focus:border-white/40"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleCreateCustomSection}
+                className="relative inline-flex h-12 items-center justify-center rounded-2xl border border-white/35 bg-white/[0.14] px-5 text-sm font-medium tracking-wide text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl transition hover:bg-white/[0.2] active:scale-[0.98]"
+              >
+                <span className="pointer-events-none absolute inset-0 rounded-2xl bg-[linear-gradient(140deg,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0.08)_45%,rgba(255,255,255,0)_100%)] opacity-80" />
+                <span className="relative">Créer section</span>
+              </button>
+            </div>
+
+            {customSections.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] px-4 py-5 text-sm text-white/65">
+                Ajoute une section personnalisée, puis remplis-la avec des artistes ou tout autre item.
+              </p>
+            ) : (
+              <div className="space-y-5">
+                {customSections.map(section => (
+                  <article key={section.id} className="rounded-2xl border border-white/12 bg-white/[0.03] p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <input
+                        value={section.title}
+                        onChange={event => handleSectionTitleChange(section.id, event.target.value)}
+                        className="h-11 flex-1 rounded-xl border border-white/15 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-white/35"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSection(section.id)}
+                        className="h-11 rounded-xl border border-red-300/30 bg-red-500/10 px-4 text-xs font-medium tracking-wide text-red-200 transition hover:bg-red-500/20"
+                      >
+                        Supprimer section
+                      </button>
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                      <input
+                        value={section.draftItem}
+                        onChange={event => handleSectionDraftChange(section.id, event.target.value)}
+                        onKeyDown={event => {
+                          if (event.key !== 'Enter') return;
+                          event.preventDefault();
+                          handleAddSectionItem(section.id);
+                        }}
+                        placeholder="Ajoute un artiste ou un item libre..."
+                        className="h-11 flex-1 rounded-xl border border-white/15 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-white/35"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddSectionItem(section.id)}
+                        className="relative inline-flex h-11 items-center justify-center rounded-xl border border-white/35 bg-white/[0.12] px-4 text-sm font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-lg transition hover:bg-white/[0.18] active:scale-[0.98]"
+                      >
+                        <span className="pointer-events-none absolute inset-0 rounded-xl bg-[linear-gradient(140deg,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.08)_45%,rgba(255,255,255,0)_100%)] opacity-80" />
+                        <span className="relative">Ajouter</span>
+                      </button>
+                    </div>
+
+                    {section.items.length > 0 ? (
+                      <ul className="mt-4 flex flex-wrap gap-2">
+                        {section.items.map((item, itemIndex) => (
+                          <li key={`${section.id}-${item}-${itemIndex}`} className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-3 py-1.5 text-xs text-white/90">
+                            <span>{item}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSectionItem(section.id, itemIndex)}
+                              className="text-white/75 transition hover:text-white"
+                              aria-label={`Retirer ${item}`}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-4 text-xs text-white/60">Aucun item pour le moment.</p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      ) : null}
 
     </main>
   );
