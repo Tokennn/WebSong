@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeftIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import RubixImageCube, { type RubixProfileItem } from '@/components/ui/rubix-image-cube';
+import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
 import { improveAvatarUrlQuality } from '@/lib/avatar';
 import { supabase } from '@/lib/supabase';
 
@@ -138,6 +141,19 @@ export default function ProfileSuggestionsPage() {
       <div ref={resultsRef}>
         <RubixImageCube items={displayItems} />
       </div>
+
+      <section className="bg-black px-6 pb-14 pt-8">
+        <div className="mx-auto flex max-w-5xl justify-center">
+          <CraftButton asChild>
+            <Link to="/">
+              <CraftButtonIcon>
+                <ArrowLeftIcon className="size-3 stroke-2" />
+              </CraftButtonIcon>
+              <CraftButtonLabel>Home</CraftButtonLabel>
+            </Link>
+          </CraftButton>
+        </div>
+      </section>
     </main>
   );
 }

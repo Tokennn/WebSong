@@ -235,7 +235,7 @@ function OverlayCopy({ subheading, heading }: { subheading: string; heading: str
 }
 
 function CommunityContent({ title, textA, textB, cta }: Omit<CommunitySection, 'imgUrl' | 'subheading' | 'heading'>) {
-  const ctaTo = cta === 'Start discovering' ? '/profile-suggestions' : undefined;
+  const ctaTo = cta === 'Start discovering' ? '/profile-suggestions' : cta === 'View standards' ? '/sign-up' : undefined;
 
   return (
     <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 pb-24 pt-12 md:grid-cols-12">

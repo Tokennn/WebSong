@@ -343,7 +343,7 @@ export default function DomeGalleryPage() {
             <Link to="/community">
               <CraftButtonLabel className="text-white">Discover</CraftButtonLabel>
               <CraftButtonIcon>
-                <ArrowUpRightIcon className="size-3 stroke-2 text-white transition-transform duration-500 group-hover:rotate-45" />
+                <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
               </CraftButtonIcon>
             </Link>
           </CraftButton>
