@@ -16,11 +16,8 @@ import {
   finalizeSpotifyAuthFromUrl,
   hasSpotifyAuth,
   isSpotifyConfigured,
-  searchSpotifyItems,
   startSpotifyAuth,
-  type SpotifyCardItem,
-  type SpotifySelectableItem,
-  type SpotifySelectableType
+  type SpotifyCardItem
 } from '@/lib/spotify';
 
 type CardItem = {
@@ -30,27 +27,8 @@ type CardItem = {
   externalUrl?: string;
 };
 
-type CreateCardRow = {
-  user_id: string;
-  slot_index: number;
-  spotify_type: SpotifySelectableType;
-  spotify_id: string;
-  title: string;
-  subtitle: string;
-  image_url: string;
-  external_url: string;
-  updated_at?: string;
-};
-
 type PublishedProfileRow = {
   user_id: string;
-};
-
-type CustomSection = {
-  id: string;
-  title: string;
-  draftItem: string;
-  items: string[];
 };
 
 const DEFAULT_CARD_ITEMS: CardItem[] = [
@@ -81,18 +59,8 @@ const DEFAULT_CARD_ITEMS: CardItem[] = [
   }
 ];
 
-const EMPTY_SLOTS: Array<SpotifySelectableItem | null> = [null, null, null, null, null];
 const SPOTIFY_OWNER_STORAGE_KEY = 'websong.spotify.owner.v2';
 const SPOTIFY_OWNER_STORAGE_KEY_LEGACY = 'websong.spotify.owner.v1';
-
-function isMissingCreateCardsTableError(error: { message?: string; code?: string } | null): boolean {
-  if (!error) return false;
-  const message = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
-  return (
-    message.includes('create_cards') &&
-    (message.includes('does not exist') || message.includes('relation') || message.includes('schema cache'))
-  );
-}
 
 function isMissingPublishedProfilesTableError(error: { message?: string; code?: string } | null): boolean {
   if (!error) return false;
@@ -103,15 +71,6 @@ function isMissingPublishedProfilesTableError(error: { message?: string; code?: 
   );
 }
 
-function selectableToCard(item: SpotifySelectableItem): CardItem {
-  return {
-    image: item.imageUrl,
-    title: item.title,
-    subtitle: item.subtitle,
-    externalUrl: item.externalUrl
-  };
-}
-
 function spotifyCardToCard(item: SpotifyCardItem): CardItem {
   return {
     image: item.imageUrl,
@@ -119,27 +78,6 @@ function spotifyCardToCard(item: SpotifyCardItem): CardItem {
     subtitle: item.subtitle,
     externalUrl: item.externalUrl
   };
-}
-
-function rowToSelectable(row: CreateCardRow): SpotifySelectableItem {
-  return {
-    spotifyType: row.spotify_type,
-    spotifyId: row.spotify_id,
-    imageUrl: row.image_url,
-    title: row.title,
-    subtitle: row.subtitle,
-    externalUrl: row.external_url
-  };
-}
-
-function buildSlotsFromRows(rows: CreateCardRow[]): Array<SpotifySelectableItem | null> {
-  const slots: Array<SpotifySelectableItem | null> = [...EMPTY_SLOTS];
-  for (const row of rows) {
-    const index = row.slot_index - 1;
-    if (index < 0 || index >= slots.length) continue;
-    slots[index] = rowToSelectable(row);
-  }
-  return slots;
 }
 
 function getUserSyncOwnerKey(user: User): string {
@@ -173,22 +111,10 @@ export default function CreatePage() {
   const [spotifyCards, setSpotifyCards] = useState<SpotifyCardItem[]>([]);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [loadingSpotify, setLoadingSpotify] = useState(false);
-
-  const [dbReady, setDbReady] = useState(true);
-  const [slots, setSlots] = useState<Array<SpotifySelectableItem | null>>(EMPTY_SLOTS);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [savingSlot, setSavingSlot] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SpotifySelectableItem[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState(1);
 
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [newSectionTitle, setNewSectionTitle] = useState('');
-  const [customSections, setCustomSections] = useState<CustomSection[]>([]);
 
   const spotifyAvailable = isSpotifyConfigured();
 
@@ -223,7 +149,7 @@ export default function CreatePage() {
       setSpotifyConnected(hasSpotifyAuth());
 
       if (items.length === 0) {
-        setSpotifyError('Spotify connecté, mais aucune donnée trouvée (artistes suivis / albums / titres aimés).');
+        setSpotifyError('Spotify connecté, mais aucune écoute récente trouvée.');
       }
     } catch (error) {
       setSpotifyConnected(false);
@@ -252,22 +178,8 @@ export default function CreatePage() {
       setSpotifyConnected(connected);
 
       if (connected) {
-        try {
-          const items = await fetchSpotifyCarouselItems(5);
-          if (!active) return;
-          setSpotifyCards(items);
-          if (items.length === 0) {
-            setSpotifyError('Spotify connecté, mais aucune donnée trouvée (artistes suivis / albums / titres aimés).');
-          }
-        } catch (error) {
-          if (!active) return;
-          setSpotifyCards([]);
-          setSpotifyConnected(false);
-          setSpotifyError(error instanceof Error ? error.message : 'Impossible de charger les données Spotify.');
-        }
-      }
-
-      if (active) {
+        await loadSpotifyCards();
+      } else if (active) {
         setLoadingSpotify(false);
       }
     };
@@ -277,20 +189,18 @@ export default function CreatePage() {
     return () => {
       active = false;
     };
-  }, [spotifyAvailable]);
+  }, [loadSpotifyCards, spotifyAvailable]);
 
   useEffect(() => {
     if (!authReady) return;
 
     if (!user) {
-      setSlots([...EMPTY_SLOTS]);
-      setDbReady(true);
-      setInfoMessage('Connecte-toi à ton compte WebSong pour sauvegarder tes 5 cards.');
+      setInfoMessage('Connecte-toi à ton compte WebSong pour voir tes 5 derniers artistes écoutés.');
       clearSpotifyAuth();
       clearSpotifyOwnerId();
       setSpotifyConnected(false);
       setSpotifyCards([]);
-      setSearchResults([]);
+      setSpotifyError(null);
       return;
     }
 
@@ -303,43 +213,16 @@ export default function CreatePage() {
       clearSpotifyOwnerId();
       setSpotifyConnected(false);
       setSpotifyCards([]);
-      setSearchResults([]);
       setSpotifyError('Spotify déconnecté: connecte le Spotify de ce compte utilisateur.');
+      return;
     }
 
-    let active = true;
-    setLoadingSlots(true);
+    setInfoMessage(null);
 
-    void supabase
-      .from('create_cards')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('slot_index', { ascending: true })
-      .then(({ data, error }) => {
-        if (!active) return;
-
-        if (error) {
-          if (isMissingCreateCardsTableError(error)) {
-            setDbReady(false);
-            setInfoMessage("Table 'create_cards' absente. Exécute docs/create_cards.sql sur Supabase.");
-          } else {
-            setInfoMessage(error.message);
-          }
-          setSlots([...EMPTY_SLOTS]);
-          setLoadingSlots(false);
-          return;
-        }
-
-        setDbReady(true);
-        setInfoMessage(null);
-        setSlots(buildSlotsFromRows((data as CreateCardRow[]) ?? []));
-        setLoadingSlots(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [authReady, user]);
+    if (spotifyAuthExists) {
+      void loadSpotifyCards();
+    }
+  }, [authReady, loadSpotifyCards, user]);
 
   const handleConnectSpotify = useCallback(async () => {
     if (!user) {
@@ -362,112 +245,7 @@ export default function CreatePage() {
     setSpotifyCards([]);
     setSpotifyConnected(false);
     setSpotifyError(null);
-    setSearchResults([]);
   }, []);
-
-  const handleSearch = useCallback(async () => {
-    const query = searchQuery.trim();
-    if (!query) {
-      setSearchResults([]);
-      return;
-    }
-
-    setSearching(true);
-    setSpotifyError(null);
-    try {
-      const results = await searchSpotifyItems(query, 12);
-      setSearchResults(results);
-      if (results.length === 0) {
-        setSpotifyError('Aucun résultat Spotify pour cette recherche.');
-      }
-    } catch (error) {
-      setSpotifyError(error instanceof Error ? error.message : 'Recherche Spotify impossible.');
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [searchQuery]);
-
-  const handleAssignSlot = useCallback(
-    async (slotIndex: number, item: SpotifySelectableItem) => {
-      if (!user) {
-        setInfoMessage('Connecte-toi à ton compte WebSong pour sauvegarder tes choix.');
-        return;
-      }
-      if (!dbReady) return;
-
-      setSavingSlot(slotIndex);
-      setInfoMessage(null);
-
-      const payload: CreateCardRow = {
-        user_id: user.id,
-        slot_index: slotIndex,
-        spotify_type: item.spotifyType,
-        spotify_id: item.spotifyId,
-        title: item.title,
-        subtitle: item.subtitle,
-        image_url: item.imageUrl,
-        external_url: item.externalUrl
-      };
-
-      const { data, error } = await supabase
-        .from('create_cards')
-        .upsert(payload, { onConflict: 'user_id,slot_index' })
-        .select()
-        .single();
-
-      setSavingSlot(null);
-
-      if (error) {
-        if (isMissingCreateCardsTableError(error)) {
-          setDbReady(false);
-          setInfoMessage("Table 'create_cards' absente. Exécute docs/create_cards.sql sur Supabase.");
-        } else {
-          setInfoMessage(error.message);
-        }
-        return;
-      }
-
-      const updated = rowToSelectable(data as CreateCardRow);
-      setSlots(current => {
-        const next = [...current];
-        next[slotIndex - 1] = updated;
-        return next;
-      });
-    },
-    [dbReady, user]
-  );
-
-  const handleClearSlot = useCallback(
-    async (slotIndex: number) => {
-      if (!user) return;
-
-      setSavingSlot(slotIndex);
-      const { error } = await supabase
-        .from('create_cards')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('slot_index', slotIndex);
-      setSavingSlot(null);
-
-      if (error) {
-        if (isMissingCreateCardsTableError(error)) {
-          setDbReady(false);
-          setInfoMessage("Table 'create_cards' absente. Exécute docs/create_cards.sql sur Supabase.");
-        } else {
-          setInfoMessage(error.message);
-        }
-        return;
-      }
-
-      setSlots(current => {
-        const next = [...current];
-        next[slotIndex - 1] = null;
-        return next;
-      });
-    },
-    [user]
-  );
 
   const handlePublish = useCallback(async () => {
     if (!user) {
@@ -501,73 +279,7 @@ export default function CreatePage() {
     navigate('/profile-suggestions');
   }, [navigate, spotifyConnected, user]);
 
-  const handleCreateCustomSection = useCallback(() => {
-    if (!user) {
-      setInfoMessage('Connecte-toi à ton compte WebSong pour créer des sections personnalisées.');
-      return;
-    }
-
-    const trimmedTitle = newSectionTitle.trim();
-    setCustomSections(current => {
-      const fallbackTitle = `Nouvelle section ${current.length + 1}`;
-      return [
-        ...current,
-        {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-          title: trimmedTitle || fallbackTitle,
-          draftItem: '',
-          items: []
-        }
-      ];
-    });
-    setNewSectionTitle('');
-  }, [newSectionTitle, user]);
-
-  const handleSectionTitleChange = useCallback((sectionId: string, value: string) => {
-    setCustomSections(current => current.map(section => (section.id === sectionId ? { ...section, title: value } : section)));
-  }, []);
-
-  const handleSectionDraftChange = useCallback((sectionId: string, value: string) => {
-    setCustomSections(current => current.map(section => (section.id === sectionId ? { ...section, draftItem: value } : section)));
-  }, []);
-
-  const handleAddSectionItem = useCallback((sectionId: string) => {
-    setCustomSections(current =>
-      current.map(section => {
-        if (section.id !== sectionId) return section;
-        const nextItem = section.draftItem.trim();
-        if (!nextItem) return section;
-        return {
-          ...section,
-          items: [...section.items, nextItem],
-          draftItem: ''
-        };
-      })
-    );
-  }, []);
-
-  const handleRemoveSectionItem = useCallback((sectionId: string, itemIndex: number) => {
-    setCustomSections(current =>
-      current.map(section => {
-        if (section.id !== sectionId) return section;
-        return {
-          ...section,
-          items: section.items.filter((_, index) => index !== itemIndex)
-        };
-      })
-    );
-  }, []);
-
-  const handleRemoveSection = useCallback((sectionId: string) => {
-    setCustomSections(current => current.filter(section => section.id !== sectionId));
-  }, []);
-
   const activeCardItems = useMemo(() => {
-    const hasCustomSlots = slots.some(Boolean);
-    if (hasCustomSlots) {
-      return slots.map((slot, index) => (slot ? selectableToCard(slot) : DEFAULT_CARD_ITEMS[index]));
-    }
-
     if (spotifyCards.length > 0) {
       const fromSpotify = spotifyCards.map(spotifyCardToCard);
       const merged: CardItem[] = [...fromSpotify];
@@ -580,7 +292,7 @@ export default function CreatePage() {
     }
 
     return DEFAULT_CARD_ITEMS;
-  }, [slots, spotifyCards]);
+  }, [spotifyCards]);
 
   const cards = useMemo(
     () =>
@@ -645,163 +357,64 @@ export default function CreatePage() {
     <main className="min-h-screen bg-black text-white">
       <section className="relative h-[100dvh] overflow-hidden">
         <div className="relative z-30 h-full w-full">
-        <div className="pointer-events-none absolute top-6 left-1/2 z-40 -translate-x-1/2 sm:top-10">
-          <div className="pointer-events-auto flex items-center gap-3">
-            <CraftButton
-              onClick={spotifyConnected ? handleDisconnectSpotify : handleConnectSpotify}
-              disabled={loadingSpotify || !spotifyAvailable}
-              hoverTheme="spotify"
-              className="h-11 px-5"
-            >
-              <CraftButtonLabel>{loadingSpotify ? 'Connexion...' : spotifyConnected ? 'Se deconnecter' : 'Se connecter'}</CraftButtonLabel>
-              <CraftButtonIcon>
-                <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
-              </CraftButtonIcon>
-            </CraftButton>
-            <CraftButton asChild className="h-11 px-5">
-              <Link to="/post-auth">
-                <CraftButtonLabel>Présentation</CraftButtonLabel>
-                <CraftButtonIcon>
-                  <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
-                </CraftButtonIcon>
-              </Link>
-            </CraftButton>
-          </div>
-        </div>
-
-        <div className="absolute inset-0">
-          <SequentialCarousel
-            cards={cards}
-            backgroundColor="#000000"
-            cardGap={280}
-            animationDuration={600}
-            sequenceDelay={80}
-            animationOrigin={0}
-            fadeStartIndex={2}
-            showNavigation
-          />
-        </div>
-
-        {user && spotifyConnected ? (
-          <div className="pointer-events-none absolute bottom-8 left-1/2 z-40 -translate-x-1/2">
-            <div className="pointer-events-auto">
-              <CraftButton type="button" onClick={handlePublish} disabled={publishing} className="h-12 px-7">
-                <CraftButtonLabel>{publishing ? 'Publishing...' : 'Publish'}</CraftButtonLabel>
+          <div className="pointer-events-none absolute top-6 left-1/2 z-40 -translate-x-1/2 sm:top-10">
+            <div className="pointer-events-auto flex items-center gap-3">
+              <CraftButton
+                onClick={spotifyConnected ? handleDisconnectSpotify : handleConnectSpotify}
+                disabled={loadingSpotify || !spotifyAvailable}
+                hoverTheme="spotify"
+                className="h-11 px-5"
+              >
+                <CraftButtonLabel>{loadingSpotify ? 'Connexion...' : spotifyConnected ? 'Se deconnecter' : 'Se connecter'}</CraftButtonLabel>
                 <CraftButtonIcon>
                   <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
                 </CraftButtonIcon>
               </CraftButton>
+              <CraftButton asChild className="h-11 px-5">
+                <Link to="/post-auth">
+                  <CraftButtonLabel>Présentation</CraftButtonLabel>
+                  <CraftButtonIcon>
+                    <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+                  </CraftButtonIcon>
+                </Link>
+              </CraftButton>
             </div>
           </div>
-        ) : null}
 
-        {infoMessage || spotifyError ? (
-          <div className="pointer-events-none absolute right-4 bottom-3 left-4 z-40 mx-auto max-w-2xl rounded-xl border border-white/15 bg-black/55 px-4 py-2 text-center text-xs text-white/80 backdrop-blur-md">
-            {infoMessage ? <p className="m-0 text-amber-300">{infoMessage}</p> : null}
-            {spotifyError ? <p className="m-0 text-red-300">{spotifyError}</p> : null}
+          <div className="absolute inset-0">
+            <SequentialCarousel
+              cards={cards}
+              backgroundColor="#000000"
+              cardGap={280}
+              animationDuration={600}
+              sequenceDelay={80}
+              animationOrigin={0}
+              fadeStartIndex={2}
+              showNavigation
+            />
           </div>
-        ) : null}
+
+          {user && spotifyConnected ? (
+            <div className="pointer-events-none absolute bottom-8 left-1/2 z-40 -translate-x-1/2">
+              <div className="pointer-events-auto">
+                <CraftButton type="button" onClick={handlePublish} disabled={publishing} className="h-12 px-7">
+                  <CraftButtonLabel>{publishing ? 'Publishing...' : 'Publish'}</CraftButtonLabel>
+                  <CraftButtonIcon>
+                    <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+                  </CraftButtonIcon>
+                </CraftButton>
+              </div>
+            </div>
+          ) : null}
+
+          {infoMessage || spotifyError ? (
+            <div className="pointer-events-none absolute right-4 bottom-3 left-4 z-40 mx-auto max-w-2xl rounded-xl border border-white/15 bg-black/55 px-4 py-2 text-center text-xs text-white/80 backdrop-blur-md">
+              {infoMessage ? <p className="m-0 text-amber-300">{infoMessage}</p> : null}
+              {spotifyError ? <p className="m-0 text-red-300">{spotifyError}</p> : null}
+            </div>
+          ) : null}
         </div>
       </section>
-
-      {user ? (
-        <section className="border-t border-white/10 bg-[#050505] px-4 py-14 sm:px-8">
-          <div className="mx-auto max-w-5xl">
-            <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="flex-1">
-                <label htmlFor="new-custom-section" className="mb-2 block text-xs tracking-[0.18em] text-white/60 uppercase">
-                  Nouvelle section
-                </label>
-                <input
-                  id="new-custom-section"
-                  value={newSectionTitle}
-                  onChange={event => setNewSectionTitle(event.target.value)}
-                  placeholder="Ex: Artistes à suivre, Albums du moment, etc."
-                  className="h-12 w-full rounded-2xl border border-white/15 bg-white/5 px-4 text-sm text-white outline-none transition focus:border-white/40"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleCreateCustomSection}
-                className="relative inline-flex h-12 items-center justify-center rounded-2xl border border-white/35 bg-white/[0.14] px-5 text-sm font-medium tracking-wide text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl transition hover:bg-white/[0.2] active:scale-[0.98]"
-              >
-                <span className="pointer-events-none absolute inset-0 rounded-2xl bg-[linear-gradient(140deg,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0.08)_45%,rgba(255,255,255,0)_100%)] opacity-80" />
-                <span className="relative">Créer section</span>
-              </button>
-            </div>
-
-            {customSections.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] px-4 py-5 text-sm text-white/65">
-                Ajoute une section personnalisée, puis remplis-la avec des artistes ou tout autre item.
-              </p>
-            ) : (
-              <div className="space-y-5">
-                {customSections.map(section => (
-                  <article key={section.id} className="rounded-2xl border border-white/12 bg-white/[0.03] p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                      <input
-                        value={section.title}
-                        onChange={event => handleSectionTitleChange(section.id, event.target.value)}
-                        className="h-11 flex-1 rounded-xl border border-white/15 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-white/35"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSection(section.id)}
-                        className="h-11 rounded-xl border border-red-300/30 bg-red-500/10 px-4 text-xs font-medium tracking-wide text-red-200 transition hover:bg-red-500/20"
-                      >
-                        Supprimer section
-                      </button>
-                    </div>
-
-                    <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                      <input
-                        value={section.draftItem}
-                        onChange={event => handleSectionDraftChange(section.id, event.target.value)}
-                        onKeyDown={event => {
-                          if (event.key !== 'Enter') return;
-                          event.preventDefault();
-                          handleAddSectionItem(section.id);
-                        }}
-                        placeholder="Ajoute un artiste ou un item libre..."
-                        className="h-11 flex-1 rounded-xl border border-white/15 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-white/35"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleAddSectionItem(section.id)}
-                        className="relative inline-flex h-11 items-center justify-center rounded-xl border border-white/35 bg-white/[0.12] px-4 text-sm font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-lg transition hover:bg-white/[0.18] active:scale-[0.98]"
-                      >
-                        <span className="pointer-events-none absolute inset-0 rounded-xl bg-[linear-gradient(140deg,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.08)_45%,rgba(255,255,255,0)_100%)] opacity-80" />
-                        <span className="relative">Ajouter</span>
-                      </button>
-                    </div>
-
-                    {section.items.length > 0 ? (
-                      <ul className="mt-4 flex flex-wrap gap-2">
-                        {section.items.map((item, itemIndex) => (
-                          <li key={`${section.id}-${item}-${itemIndex}`} className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-3 py-1.5 text-xs text-white/90">
-                            <span>{item}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSectionItem(section.id, itemIndex)}
-                              className="text-white/75 transition hover:text-white"
-                              aria-label={`Retirer ${item}`}
-                            >
-                              ×
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-4 text-xs text-white/60">Aucun item pour le moment.</p>
-                    )}
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      ) : null}
-
     </main>
   );
 }

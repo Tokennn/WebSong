@@ -5,7 +5,7 @@ const SPOTIFY_AUTH_STORAGE_KEY = 'websong.spotify.auth.v1';
 const SPOTIFY_OAUTH_STATE_KEY = 'websong.spotify.oauth.state';
 const SPOTIFY_OAUTH_VERIFIER_KEY = 'websong.spotify.oauth.verifier';
 
-const SPOTIFY_SCOPES = ['user-follow-read', 'user-library-read'];
+const SPOTIFY_SCOPES = ['user-follow-read', 'user-library-read', 'user-read-recently-played'];
 
 type StoredSpotifyAuth = {
   accessToken: string;
@@ -104,6 +104,28 @@ type SearchResponse = {
       external_urls?: { spotify?: string };
     }>;
   };
+};
+
+type RecentlyPlayedResponse = {
+  items: Array<{
+    track: {
+      album: {
+        images: SpotifyImage[];
+      };
+      artists: Array<{
+        id: string;
+        name: string;
+        external_urls?: { spotify?: string };
+      }>;
+    };
+  }>;
+};
+
+type ArtistsResponse = {
+  artists: Array<{
+    id: string;
+    images: SpotifyImage[];
+  }>;
 };
 
 type FinalizeSpotifyAuthResult = {
@@ -356,9 +378,67 @@ const toTrackCards = (payload: SavedTracksResponse): SpotifyCardItem[] =>
     }))
     .filter(item => item.imageUrl && item.externalUrl);
 
+const fetchRecentlyPlayedArtistCards = async (accessToken: string, maxItems: number): Promise<SpotifyCardItem[]> => {
+  const recentlyPlayedPayload = await spotifyRequest<RecentlyPlayedResponse>(
+    `/me/player/recently-played?limit=${Math.min(50, Math.max(20, maxItems * 10))}`,
+    accessToken
+  );
+
+  const dedupedArtists: Array<{
+    id: string;
+    name: string;
+    externalUrl: string;
+    fallbackImageUrl: string;
+  }> = [];
+  const seenArtistIds = new Set<string>();
+
+  for (const item of recentlyPlayedPayload.items) {
+    const primaryArtist = item.track.artists[0];
+    if (!primaryArtist?.id || !primaryArtist.external_urls?.spotify) continue;
+    if (seenArtistIds.has(primaryArtist.id)) continue;
+    seenArtistIds.add(primaryArtist.id);
+    dedupedArtists.push({
+      id: primaryArtist.id,
+      name: primaryArtist.name,
+      externalUrl: primaryArtist.external_urls.spotify,
+      fallbackImageUrl: item.track.album.images[0]?.url ?? ''
+    });
+    if (dedupedArtists.length >= Math.max(maxItems * 2, maxItems + 3)) break;
+  }
+
+  if (dedupedArtists.length === 0) return [];
+
+  const ids = dedupedArtists.map(artist => artist.id);
+  const artistDetailsPayload = await spotifyRequest<ArtistsResponse>(`/artists?ids=${ids.join(',')}`, accessToken);
+
+  const imageByArtistId = new Map<string, string>();
+  for (const artist of artistDetailsPayload.artists) {
+    const imageUrl = artist.images[0]?.url ?? '';
+    if (!artist.id || !imageUrl) continue;
+    imageByArtistId.set(artist.id, imageUrl);
+  }
+
+  return dedupedArtists
+    .map(artist => ({
+      imageUrl: imageByArtistId.get(artist.id) ?? artist.fallbackImageUrl,
+      title: artist.name,
+      subtitle: 'Recent listening',
+      externalUrl: artist.externalUrl
+    }))
+    .filter(item => item.imageUrl && item.externalUrl)
+    .slice(0, maxItems);
+};
+
 export const fetchSpotifyCarouselItems = async (maxItems = 5): Promise<SpotifyCardItem[]> => {
   const accessToken = await getSpotifyAccessToken();
   if (!accessToken) return [];
+
+  try {
+    const recentArtists = await fetchRecentlyPlayedArtistCards(accessToken, maxItems);
+    if (recentArtists.length > 0) return recentArtists;
+  } catch {
+    // Fallback for older tokens that may miss the recent-listening scope.
+  }
 
   const [artistsPayload, albumsPayload, tracksPayload] = await Promise.all([
     spotifyRequest<FollowedArtistsResponse>('/me/following?type=artist&limit=20', accessToken),
