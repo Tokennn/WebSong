@@ -224,6 +224,20 @@ export default function CreatePage() {
     }
   }, [authReady, loadSpotifyCards, user]);
 
+  useEffect(() => {
+    if (!user || !spotifyConnected) return;
+
+    const refreshIntervalMs = 3 * 60 * 1000;
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      void loadSpotifyCards();
+    }, refreshIntervalMs);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [loadSpotifyCards, spotifyConnected, user]);
+
   const handleConnectSpotify = useCallback(async () => {
     if (!user) {
       setInfoMessage('Connecte-toi à ton compte WebSong avant de connecter Spotify.');
