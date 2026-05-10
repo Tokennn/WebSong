@@ -245,9 +245,31 @@ export default function CreatePage() {
     }
 
     setSpotifyError(null);
+    setInfoMessage(null);
     setSpotifyOwnerId(getUserSyncOwnerKey(user));
     try {
-      await startSpotifyAuth();
+      const logoutWindow = window.open(
+        'https://accounts.spotify.com/en/logout',
+        'spotify-logout',
+        'width=560,height=720,noopener,noreferrer'
+      );
+
+      if (!logoutWindow) {
+        setInfoMessage("Popup bloquée. Autorise les popups ou clique sur 'Not you?' dans Spotify.");
+        await startSpotifyAuth();
+        return;
+      }
+
+      window.setTimeout(() => {
+        try {
+          logoutWindow.close();
+        } catch {
+          // Ignore close failures for cross-origin popup.
+        }
+        void startSpotifyAuth().catch(error => {
+          setSpotifyError(error instanceof Error ? error.message : 'Impossible de démarrer la connexion Spotify.');
+        });
+      }, 1200);
     } catch (error) {
       setSpotifyError(error instanceof Error ? error.message : 'Impossible de démarrer la connexion Spotify.');
     }
