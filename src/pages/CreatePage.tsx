@@ -195,7 +195,7 @@ export default function CreatePage() {
     if (!authReady) return;
 
     if (!user) {
-      setInfoMessage('Connecte-toi à ton compte WebSong pour voir tes 5 derniers artistes écoutés.');
+      setInfoMessage('Connecte-toi à ton compte WebSong pour voir tes 5 derniers titres écoutés.');
       clearSpotifyAuth();
       clearSpotifyOwnerId();
       setSpotifyConnected(false);

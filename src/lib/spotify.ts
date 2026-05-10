@@ -109,22 +109,14 @@ type SearchResponse = {
 type RecentlyPlayedResponse = {
   items: Array<{
     track: {
+      id: string | null;
+      name: string;
+      external_urls?: { spotify?: string };
       album: {
         images: SpotifyImage[];
       };
-      artists: Array<{
-        id: string;
-        name: string;
-        external_urls?: { spotify?: string };
-      }>;
+      artists: Array<{ name: string }>;
     };
-  }>;
-};
-
-type ArtistsResponse = {
-  artists: Array<{
-    id: string;
-    images: SpotifyImage[];
   }>;
 };
 
@@ -378,55 +370,34 @@ const toTrackCards = (payload: SavedTracksResponse): SpotifyCardItem[] =>
     }))
     .filter(item => item.imageUrl && item.externalUrl);
 
-const fetchRecentlyPlayedArtistCards = async (accessToken: string, maxItems: number): Promise<SpotifyCardItem[]> => {
+const fetchRecentlyPlayedTrackCards = async (accessToken: string, maxItems: number): Promise<SpotifyCardItem[]> => {
   const recentlyPlayedPayload = await spotifyRequest<RecentlyPlayedResponse>(
     `/me/player/recently-played?limit=${Math.min(50, Math.max(20, maxItems * 10))}`,
     accessToken
   );
 
-  const dedupedArtists: Array<{
-    id: string;
-    name: string;
-    externalUrl: string;
-    fallbackImageUrl: string;
-  }> = [];
-  const seenArtistIds = new Set<string>();
+  const dedupedTracks: SpotifyCardItem[] = [];
+  const seenTrackIds = new Set<string>();
 
   for (const item of recentlyPlayedPayload.items) {
-    const primaryArtist = item.track.artists[0];
-    if (!primaryArtist?.id || !primaryArtist.external_urls?.spotify) continue;
-    if (seenArtistIds.has(primaryArtist.id)) continue;
-    seenArtistIds.add(primaryArtist.id);
-    dedupedArtists.push({
-      id: primaryArtist.id,
-      name: primaryArtist.name,
-      externalUrl: primaryArtist.external_urls.spotify,
-      fallbackImageUrl: item.track.album.images[0]?.url ?? ''
+    const trackId = item.track.id;
+    const trackUrl = item.track.external_urls?.spotify ?? '';
+    const trackImage = item.track.album.images[0]?.url ?? '';
+    if (!trackId || !trackUrl || !trackImage) continue;
+    if (seenTrackIds.has(trackId)) continue;
+    seenTrackIds.add(trackId);
+
+    const artistNames = item.track.artists.map(artist => artist.name).filter(Boolean).join(', ');
+    dedupedTracks.push({
+      imageUrl: trackImage,
+      title: item.track.name,
+      subtitle: `${artistNames} • Recently played`,
+      externalUrl: trackUrl
     });
-    if (dedupedArtists.length >= Math.max(maxItems * 2, maxItems + 3)) break;
+    if (dedupedTracks.length >= maxItems) break;
   }
 
-  if (dedupedArtists.length === 0) return [];
-
-  const ids = dedupedArtists.map(artist => artist.id);
-  const artistDetailsPayload = await spotifyRequest<ArtistsResponse>(`/artists?ids=${ids.join(',')}`, accessToken);
-
-  const imageByArtistId = new Map<string, string>();
-  for (const artist of artistDetailsPayload.artists) {
-    const imageUrl = artist.images[0]?.url ?? '';
-    if (!artist.id || !imageUrl) continue;
-    imageByArtistId.set(artist.id, imageUrl);
-  }
-
-  return dedupedArtists
-    .map(artist => ({
-      imageUrl: imageByArtistId.get(artist.id) ?? artist.fallbackImageUrl,
-      title: artist.name,
-      subtitle: 'Recent listening',
-      externalUrl: artist.externalUrl
-    }))
-    .filter(item => item.imageUrl && item.externalUrl)
-    .slice(0, maxItems);
+  return dedupedTracks.slice(0, maxItems);
 };
 
 export const fetchSpotifyCarouselItems = async (maxItems = 5): Promise<SpotifyCardItem[]> => {
@@ -434,9 +405,12 @@ export const fetchSpotifyCarouselItems = async (maxItems = 5): Promise<SpotifyCa
   if (!accessToken) return [];
 
   try {
-    const recentArtists = await fetchRecentlyPlayedArtistCards(accessToken, maxItems);
-    if (recentArtists.length > 0) return recentArtists;
-  } catch {
+    const recentTracks = await fetchRecentlyPlayedTrackCards(accessToken, maxItems);
+    if (recentTracks.length > 0) return recentTracks;
+  } catch (error) {
+    if (error instanceof Error && error.message.toLowerCase().includes('insufficient client scope')) {
+      throw new Error('Spotify doit être reconnecté pour lire les écoutes récentes.');
+    }
     // Fallback for older tokens that may miss the recent-listening scope.
   }
 
