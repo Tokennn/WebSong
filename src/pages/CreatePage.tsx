@@ -247,6 +247,12 @@ export default function CreatePage() {
     setSpotifyError(null);
   }, []);
 
+  const handleRefreshSpotify = useCallback(async () => {
+    if (!spotifyConnected) return;
+    setInfoMessage(null);
+    await loadSpotifyCards();
+  }, [loadSpotifyCards, spotifyConnected]);
+
   const handlePublish = useCallback(async () => {
     if (!user) {
       setInfoMessage('Connecte-toi à ton compte WebSong avant de publier ton profil.');
@@ -378,6 +384,14 @@ export default function CreatePage() {
                   </CraftButtonIcon>
                 </Link>
               </CraftButton>
+              {spotifyConnected ? (
+                <CraftButton onClick={() => void handleRefreshSpotify()} disabled={loadingSpotify} className="h-11 px-5">
+                  <CraftButtonLabel>{loadingSpotify ? 'Refresh...' : 'Refresh'}</CraftButtonLabel>
+                  <CraftButtonIcon>
+                    <ArrowUpRightIcon className="size-3 stroke-2 transition-transform duration-500 group-hover:rotate-45" />
+                  </CraftButtonIcon>
+                </CraftButton>
+              ) : null}
             </div>
           </div>
 
