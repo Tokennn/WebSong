@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNo
 import type { User } from '@supabase/supabase-js';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
+import { FaTwitter } from 'react-icons/fa';
 import { FiMapPin } from 'react-icons/fi';
-import { SiGithub, SiInstagram, SiTiktok, SiX } from 'react-icons/si';
+import type { IconType } from 'react-icons';
+import { SiGithub, SiInstagram, SiTiktok } from 'react-icons/si';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { twMerge } from 'tailwind-merge';
 import { Globe } from '@/components/ui/cobe-globe';
@@ -349,7 +351,8 @@ function SocialLinkCard({
   label,
   onActivate,
   disabled,
-  icon,
+  icon: Icon,
+  iconSize = 112,
   className,
   iconClassName,
   hasLink
@@ -357,7 +360,8 @@ function SocialLinkCard({
   label: string;
   onActivate: () => void;
   disabled: boolean;
-  icon: ReactNode;
+  icon: IconType;
+  iconSize?: number;
   className: string;
   iconClassName: string;
   hasLink: boolean;
@@ -370,12 +374,12 @@ function SocialLinkCard({
         disabled={disabled}
         aria-label={hasLink ? `Ouvrir le lien ${label}` : `Ajouter le lien ${label}`}
         className={twMerge(
-          'grid h-full w-full min-h-[170px] place-content-center rounded-lg text-5xl transition-transform duration-200',
-          'disabled:cursor-not-allowed disabled:opacity-65',
+          'grid h-full w-full min-h-[170px] place-content-center rounded-lg bg-transparent transition-transform duration-200',
+          'disabled:cursor-not-allowed',
           iconClassName
         )}
       >
-        {icon}
+        <Icon size={iconSize} aria-hidden />
       </button>
     </Block>
   );
@@ -387,7 +391,7 @@ type SocialEditorState = {
   placeholder: string;
   value: string;
   initialValue: string;
-  icon: ReactNode;
+  icon: IconType;
   className: string;
   iconClassName: string;
 };
@@ -396,7 +400,8 @@ type SocialLinkConfig = {
   key: keyof AboutProfile;
   title: string;
   placeholder: string;
-  icon: ReactNode;
+  icon: IconType;
+  iconSize?: number;
   className: string;
   iconClassName: string;
 };
@@ -418,33 +423,38 @@ function SocialsBlock({
       key: 'youtubeUrl',
       title: 'Instagram',
       placeholder: 'https://instagram.com/...',
-      className: 'bg-gradient-to-br from-fuchsia-600 via-violet-600 to-indigo-600',
-      iconClassName: 'text-white',
-      icon: <SiInstagram />
+      className: 'border-none bg-transparent shadow-none',
+      iconClassName: 'text-[#E1306C] drop-shadow-[0_8px_18px_rgba(225,48,108,0.25)]',
+      iconSize: 132,
+      icon: SiInstagram
     },
     {
       key: 'githubUrl',
       title: 'GitHub',
       placeholder: 'https://github.com/...',
-      className: 'bg-green-600',
-      iconClassName: 'text-white',
-      icon: <SiGithub />
+      className: 'border-none bg-transparent shadow-none',
+      iconClassName: 'text-[#0B0D12] drop-shadow-[0_8px_18px_rgba(11,13,18,0.25)]',
+      iconSize: 126,
+      icon: SiGithub
     },
     {
       key: 'tiktokUrl',
       title: 'TikTok',
       placeholder: 'https://tiktok.com/@...',
-      className: 'bg-zinc-50',
-      iconClassName: 'text-black',
-      icon: <SiTiktok />
+      className: 'border-none bg-transparent shadow-none',
+      iconClassName:
+        'text-[#0B0D12] drop-shadow-[3px_0_0_#25F4EE] drop-shadow-[-3px_0_0_#FE2C55] drop-shadow-[0_8px_14px_rgba(11,13,18,0.2)]',
+      iconSize: 128,
+      icon: SiTiktok
     },
     {
       key: 'xUrl',
-      title: 'X',
+      title: 'Twitter',
       placeholder: 'https://x.com/...',
-      className: 'bg-blue-500',
-      iconClassName: 'text-white',
-      icon: <SiX />
+      className: 'border-none bg-transparent shadow-none',
+      iconClassName: 'text-[#1D9BF0] drop-shadow-[0_8px_18px_rgba(29,155,240,0.2)]',
+      iconSize: 132,
+      icon: FaTwitter
     }
   ];
 
@@ -506,6 +516,7 @@ function SocialsBlock({
           label={config.title}
           onActivate={() => handleCardActivate(config)}
           disabled={disabled}
+          iconSize={config.iconSize}
           className={config.className}
           iconClassName={config.iconClassName}
           icon={config.icon}
@@ -530,9 +541,16 @@ function SocialsBlock({
               className="w-full max-w-md rounded-2xl border border-white/15 bg-zinc-900 p-4 shadow-2xl"
               onClick={event => event.stopPropagation()}
             >
-              <div className={twMerge('mb-4 overflow-hidden rounded-xl', editor.className)}>
-                <div className={twMerge('grid h-36 place-content-center text-5xl', editor.iconClassName)}>{editor.icon}</div>
-              </div>
+              {(() => {
+                const EditorIcon = editor.icon;
+                return (
+                  <div className={twMerge('mb-4 overflow-hidden rounded-xl', editor.className)}>
+                    <div className={twMerge('grid h-36 place-content-center', editor.iconClassName)}>
+                      <EditorIcon size={64} aria-hidden />
+                    </div>
+                  </div>
+                );
+              })()}
 
               <p className="mb-2 text-xs tracking-[0.14em] text-zinc-400 uppercase">{editor.title}</p>
               <input
@@ -611,23 +629,23 @@ function LocationBlock({
         className="text-lg text-zinc-300"
         placeholder="Paris ou 48.8566, 2.3522"
       />
-      <div className="overflow-hidden rounded-lg border border-zinc-300 bg-white p-4">
+      <div className="overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 p-4">
         <Globe
-          className="mx-auto w-full max-w-[320px] rounded-full border-2 border-black bg-white p-1"
+          className="mx-auto w-full max-w-[320px] rounded-full border border-zinc-700 bg-zinc-950 p-1"
           markers={[marker]}
-          markerColor={[0.08, 0.08, 0.08]}
-          baseColor={[1, 1, 1]}
-          arcColor={[0.12, 0.12, 0.12]}
-          glowColor={[1, 1, 1]}
-          dark={0}
-          mapBrightness={8}
+          markerColor={[0.92, 0.95, 1]}
+          baseColor={[0.18, 0.21, 0.27]}
+          arcColor={[0.45, 0.72, 1]}
+          glowColor={[0.09, 0.12, 0.2]}
+          dark={1}
+          mapBrightness={1.15}
           markerSize={0.11}
           markerElevation={0.02}
           speed={0.0025}
           theta={0.25}
           diffuse={1.4}
         />
-        <p className="mt-3 text-center text-xs text-zinc-600">
+        <p className="mt-3 text-center text-xs text-zinc-400">
           Position: {marker.location[0].toFixed(4)}, {marker.location[1].toFixed(4)}
         </p>
       </div>
@@ -897,7 +915,7 @@ export default function AboutYouPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-900 px-4 py-12 text-zinc-50">
+    <div className="min-h-screen bg-neutral-100 px-4 py-12 text-zinc-50">
       <div className="pointer-events-none fixed top-4 right-4 z-20 sm:top-8 sm:right-8">
         <div className="pointer-events-auto">
           <CraftButton asChild>
