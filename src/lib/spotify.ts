@@ -180,7 +180,43 @@ const cleanAuthUrl = () => {
   url.searchParams.delete('code');
   url.searchParams.delete('state');
   url.searchParams.delete('error');
+  url.searchParams.delete('error_description');
   window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+};
+
+const parseSpotifyErrorText = (details: string) => {
+  const trimmed = details.trim();
+  if (!trimmed) return '';
+
+  try {
+    const payload = JSON.parse(trimmed) as { error?: string; error_description?: string; message?: string };
+    return payload.error_description ?? payload.message ?? payload.error ?? trimmed;
+  } catch {
+    return trimmed;
+  }
+};
+
+const toFriendlySpotifyAuthError = (details: string) => {
+  const parsed = parseSpotifyErrorText(details);
+  const normalized = parsed.toLowerCase();
+
+  if (normalized.includes('user is not registered for this application')) {
+    return "Ce compte Spotify n'est pas autorise pour cette application. Le proprietaire doit l'ajouter dans Spotify Dashboard > Users and Access, ou passer l'application en mode production.";
+  }
+
+  if (normalized.includes('invalid_client')) {
+    return 'Configuration Spotify invalide (client id).';
+  }
+
+  if (normalized.includes('invalid_grant')) {
+    return 'Connexion Spotify expiree ou invalide. Reconnecte Spotify.';
+  }
+
+  if (normalized.includes('access_denied')) {
+    return "Connexion Spotify refusee par l'utilisateur ou par les permissions de l'application.";
+  }
+
+  return parsed || 'Failed to exchange Spotify auth code.';
 };
 
 const exchangeAuthCodeForToken = async (code: string, verifier: string) => {
@@ -202,7 +238,7 @@ const exchangeAuthCodeForToken = async (code: string, verifier: string) => {
 
   if (!response.ok) {
     const details = await response.text();
-    throw new Error(details || 'Failed to exchange Spotify auth code.');
+    throw new Error(toFriendlySpotifyAuthError(details));
   }
 
   return (await response.json()) as SpotifyTokenResponse;
@@ -292,12 +328,14 @@ export const finalizeSpotifyAuthFromUrl = async (): Promise<FinalizeSpotifyAuthR
   const code = params.get('code');
   const state = params.get('state');
   const oauthError = params.get('error');
+  const oauthErrorDescription = params.get('error_description');
 
   if (!code && !oauthError) return { handled: false, connected: hasSpotifyAuth() };
 
   if (oauthError) {
     cleanAuthUrl();
-    return { handled: true, connected: false, error: `Spotify auth error: ${oauthError}` };
+    const details = oauthErrorDescription ? `${oauthError}: ${oauthErrorDescription}` : oauthError;
+    return { handled: true, connected: false, error: toFriendlySpotifyAuthError(details) };
   }
 
   const expectedState = localStorage.getItem(SPOTIFY_OAUTH_STATE_KEY);

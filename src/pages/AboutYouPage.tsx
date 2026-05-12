@@ -634,16 +634,18 @@ function LocationBlock({
           className="mx-auto w-full max-w-[320px] rounded-full border border-zinc-700 bg-zinc-950 p-1"
           markers={[marker]}
           markerColor={[0.92, 0.95, 1]}
-          baseColor={[0.18, 0.21, 0.27]}
+          baseColor={[1, 1, 1]}
           arcColor={[0.45, 0.72, 1]}
-          glowColor={[0.09, 0.12, 0.2]}
-          dark={1}
-          mapBrightness={1.15}
+          glowColor={[0.94, 0.94, 0.94]}
+          dark={0}
+          mapBrightness={6}
           markerSize={0.11}
           markerElevation={0.02}
           speed={0.0025}
           theta={0.25}
           diffuse={1.4}
+          focusLocation={marker.location}
+          allowPointerInteraction={false}
         />
         <p className="mt-3 text-center text-xs text-zinc-400">
           Position: {marker.location[0].toFixed(4)}, {marker.location[1].toFixed(4)}

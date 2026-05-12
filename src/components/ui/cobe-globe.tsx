@@ -34,6 +34,40 @@ export interface GlobeProps {
   theta?: number;
   diffuse?: number;
   mapSamples?: number;
+  focusLocation?: [number, number] | null;
+  allowPointerInteraction?: boolean;
+}
+
+const { PI, sin, cos, atan2 } = Math;
+
+function locationToCartesian([lat, lng]: [number, number]): [number, number, number] {
+  const latRad = (lat * PI) / 180;
+  const lngRad = (lng * PI) / 180 - PI;
+  const c = cos(latRad);
+  return [-c * cos(lngRad), sin(latRad), c * sin(lngRad)];
+}
+
+function normalizeAngle(angle: number): number {
+  let next = angle;
+  while (next <= -PI) next += PI * 2;
+  while (next > PI) next -= PI * 2;
+  return next;
+}
+
+function shortestAngleDelta(from: number, to: number): number {
+  return normalizeAngle(to - from);
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function locationToFocusAngles(location: [number, number]): { phi: number; theta: number } {
+  const [x, y, z] = locationToCartesian(location);
+  const phi = atan2(-x, z);
+  const anchor = sin(phi) * x - cos(phi) * z;
+  const theta = clamp(atan2(-y, anchor), -0.4, 0.4);
+  return { phi, theta };
 }
 
 export function Globe({
@@ -53,7 +87,9 @@ export function Globe({
   speed = 0.003,
   theta = 0.2,
   diffuse = 1.5,
-  mapSamples = 16000
+  mapSamples = 16000,
+  focusLocation = null,
+  allowPointerInteraction = true
 }: GlobeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pointerInteracting = useRef<{ x: number; y: number } | null>(null);
@@ -63,12 +99,15 @@ export function Globe({
   const phiOffsetRef = useRef(0);
   const thetaOffsetRef = useRef(0);
   const isPausedRef = useRef(false);
+  const focusTargetRef = useRef<{ phi: number; theta: number } | null>(null);
+  const focusSettledRef = useRef(true);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!allowPointerInteraction) return;
     pointerInteracting.current = { x: e.clientX, y: e.clientY };
     if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
     isPausedRef.current = true;
-  }, []);
+  }, [allowPointerInteraction]);
 
   const handlePointerMove = useCallback((e: PointerEvent) => {
     if (pointerInteracting.current === null) return;
@@ -91,6 +130,7 @@ export function Globe({
   }, []);
 
   const handlePointerUp = useCallback(() => {
+    if (!allowPointerInteraction) return;
     if (pointerInteracting.current !== null) {
       phiOffsetRef.current += dragOffset.current.phi;
       thetaOffsetRef.current += dragOffset.current.theta;
@@ -101,7 +141,13 @@ export function Globe({
     pointerInteracting.current = null;
     if (canvasRef.current) canvasRef.current.style.cursor = "grab";
     isPausedRef.current = false;
-  }, []);
+  }, [allowPointerInteraction]);
+
+  useEffect(() => {
+    if (!focusLocation) return;
+    focusTargetRef.current = locationToFocusAngles(focusLocation);
+    focusSettledRef.current = false;
+  }, [focusLocation]);
 
   useEffect(() => {
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
@@ -159,20 +205,37 @@ export function Globe({
 
       const tick = () => {
         if (!isPausedRef.current) {
-          phi += speed;
-          if (Math.abs(velocity.current.phi) > 0.0001 || Math.abs(velocity.current.theta) > 0.0001) {
-            phiOffsetRef.current += velocity.current.phi;
-            thetaOffsetRef.current += velocity.current.theta;
-            velocity.current.phi *= 0.95;
-            velocity.current.theta *= 0.95;
-          }
+          const focusTarget = focusTargetRef.current;
+          if (focusTarget && !focusSettledRef.current) {
+            const currentPhi = phi + phiOffsetRef.current + dragOffset.current.phi;
+            const currentTheta = theta + thetaOffsetRef.current + dragOffset.current.theta;
+            const phiDelta = shortestAngleDelta(currentPhi, focusTarget.phi);
+            const thetaDelta = focusTarget.theta - currentTheta;
 
-          const thetaMin = -0.4;
-          const thetaMax = 0.4;
-          if (thetaOffsetRef.current < thetaMin) {
-            thetaOffsetRef.current += (thetaMin - thetaOffsetRef.current) * 0.1;
-          } else if (thetaOffsetRef.current > thetaMax) {
-            thetaOffsetRef.current += (thetaMax - thetaOffsetRef.current) * 0.1;
+            phiOffsetRef.current += phiDelta * 0.1;
+            thetaOffsetRef.current += thetaDelta * 0.1;
+            velocity.current.phi = 0;
+            velocity.current.theta = 0;
+
+            if (Math.abs(phiDelta) < 0.002 && Math.abs(thetaDelta) < 0.002) {
+              focusSettledRef.current = true;
+            }
+          } else {
+            phi += speed;
+            if (Math.abs(velocity.current.phi) > 0.0001 || Math.abs(velocity.current.theta) > 0.0001) {
+              phiOffsetRef.current += velocity.current.phi;
+              thetaOffsetRef.current += velocity.current.theta;
+              velocity.current.phi *= 0.95;
+              velocity.current.theta *= 0.95;
+            }
+
+            const thetaMin = -0.4;
+            const thetaMax = 0.4;
+            if (thetaOffsetRef.current < thetaMin) {
+              thetaOffsetRef.current += (thetaMin - thetaOffsetRef.current) * 0.1;
+            } else if (thetaOffsetRef.current > thetaMax) {
+              thetaOffsetRef.current += (thetaMax - thetaOffsetRef.current) * 0.1;
+            }
           }
         }
 
@@ -254,11 +317,11 @@ export function Globe({
         style={{
           width: "100%",
           height: "100%",
-          cursor: "grab",
           opacity: 0,
           transition: "opacity 1s ease",
           borderRadius: "50%",
-          touchAction: "none"
+          touchAction: allowPointerInteraction ? "none" : "auto",
+          cursor: allowPointerInteraction ? "grab" : "default"
         }}
       />
     </div>
