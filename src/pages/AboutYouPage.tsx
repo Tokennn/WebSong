@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type KeyboardEvent, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
@@ -106,9 +106,28 @@ const LOCATION_COORDS: Record<string, [number, number]> = {
   sydney: [-33.8688, 151.2093],
   singapore: [1.3521, 103.8198],
   dubai: [25.2048, 55.2708],
+  congo: [-0.228, 15.8277],
+  'republic of the congo': [-0.228, 15.8277],
+  'republique du congo': [-0.228, 15.8277],
+  drc: [-4.0383, 21.7587],
+  'democratic republic of congo': [-4.0383, 21.7587],
+  'democratic republic of the congo': [-4.0383, 21.7587],
+  'rdc congo': [-4.0383, 21.7587],
+  'congo kinshasa': [-4.0383, 21.7587],
+  'congo brazzaville': [-0.228, 15.8277],
   capetown: [-33.9249, 18.4241],
   'cape town': [-33.9249, 18.4241]
 };
+
+function normalizeLocationKey(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}\s,-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function parseCoordinates(value: string): [number, number] | null {
   const match = value.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
@@ -122,19 +141,66 @@ function parseCoordinates(value: string): [number, number] | null {
   return [lat, lng];
 }
 
-function resolveLocationCoords(rawLabel: string): [number, number] {
+function resolveKnownLocationCoords(rawLabel: string): [number, number] | null {
   const label = rawLabel.trim();
   if (!label) return LOCATION_COORDS.paris;
 
   const explicitCoords = parseCoordinates(label);
   if (explicitCoords) return explicitCoords;
 
-  const key = label
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  const key = normalizeLocationKey(label);
+  if (!key) return LOCATION_COORDS.paris;
+  if (LOCATION_COORDS[key]) return LOCATION_COORDS[key];
 
-  return LOCATION_COORDS[key] ?? LOCATION_COORDS.paris;
+  const tokens = key.split(/[\s,-]+/).filter(Boolean);
+  const keys = Object.keys(LOCATION_COORDS);
+
+  let bestKey: string | null = null;
+  let bestScore = 0;
+  for (const candidate of keys) {
+    if (key.includes(candidate) || candidate.includes(key)) {
+      const score = candidate.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestKey = candidate;
+      }
+      continue;
+    }
+
+    const matchedTokens = tokens.filter(token => candidate.includes(token));
+    if (matchedTokens.length === 0) continue;
+    const score = matchedTokens.join('').length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = candidate;
+    }
+  }
+
+  return bestKey ? LOCATION_COORDS[bestKey] : null;
+}
+
+async function geocodeWithOpenMeteo(label: string, signal: AbortSignal): Promise<[number, number] | null> {
+  const endpoint = new URL('https://geocoding-api.open-meteo.com/v1/search');
+  endpoint.searchParams.set('name', label);
+  endpoint.searchParams.set('count', '1');
+  endpoint.searchParams.set('language', 'fr');
+  endpoint.searchParams.set('format', 'json');
+
+  const response = await fetch(endpoint.toString(), {
+    method: 'GET',
+    signal,
+    headers: { Accept: 'application/json' }
+  });
+
+  if (!response.ok) return null;
+  const payload = (await response.json()) as {
+    results?: Array<{ latitude?: number; longitude?: number }>;
+  };
+  const first = payload.results?.[0];
+  if (!first) return null;
+  if (typeof first.latitude !== 'number' || typeof first.longitude !== 'number') return null;
+  if (!Number.isFinite(first.latitude) || !Number.isFinite(first.longitude)) return null;
+  return [first.latitude, first.longitude];
 }
 
 function isUnsetSocialLink(value: string): boolean {
@@ -263,18 +329,24 @@ function InlineInput({
   onChange,
   className,
   placeholder,
-  disabled
+  disabled,
+  onBlur,
+  onKeyDown
 }: {
   value: string;
   onChange: (nextValue: string) => void;
   className?: string;
   placeholder?: string;
   disabled?: boolean;
+  onBlur?: () => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }) {
   return (
     <input
       value={value}
       onChange={event => onChange(event.target.value)}
+      onBlur={onBlur}
+      onKeyDown={onKeyDown}
       placeholder={placeholder}
       disabled={disabled}
       className={twMerge(
@@ -609,13 +681,21 @@ function LocationBlock({
   profile,
   marker,
   onFieldChange,
-  disabled
+  disabled,
+  onResolveLocation,
+  isResolvingLocation
 }: {
   profile: AboutProfile;
   marker: { id: string; location: [number, number]; label: string };
   onFieldChange: (key: keyof AboutProfile, value: string) => void;
   disabled: boolean;
+  onResolveLocation: (label: string) => void;
+  isResolvingLocation: boolean;
 }) {
+  const triggerResolve = () => {
+    onResolveLocation(profile.locationLabel);
+  };
+
   return (
     <Block className="col-span-12 flex flex-col gap-4">
       <div className="flex items-center gap-2">
@@ -625,10 +705,17 @@ function LocationBlock({
       <InlineInput
         value={profile.locationLabel}
         onChange={value => onFieldChange('locationLabel', value)}
+        onBlur={triggerResolve}
+        onKeyDown={event => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          triggerResolve();
+        }}
         disabled={disabled}
         className="text-lg text-zinc-300"
         placeholder="Paris ou 48.8566, 2.3522"
       />
+      <p className="text-xs text-zinc-500">{isResolvingLocation ? 'Recherche de la destination...' : 'Entrée pour rechercher'}</p>
       <div className="overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 p-4">
         <Globe
           className="mx-auto w-full max-w-[320px] rounded-full border border-zinc-700 bg-zinc-950 p-1"
@@ -641,7 +728,7 @@ function LocationBlock({
           mapBrightness={6}
           markerSize={0.11}
           markerElevation={0.02}
-          speed={0.0025}
+          speed={0}
           theta={0.25}
           diffuse={1.4}
           focusLocation={marker.location}
@@ -660,6 +747,8 @@ export default function AboutYouPage() {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AboutProfile>(DEFAULT_PROFILE);
+  const [resolvedLocationCoords, setResolvedLocationCoords] = useState<[number, number]>(LOCATION_COORDS.paris);
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [dbReady, setDbReady] = useState(true);
@@ -669,6 +758,8 @@ export default function AboutYouPage() {
   const skipAutosaveRef = useRef(false);
   const saveTimeoutRef = useRef<number | null>(null);
   const savedBadgeTimeoutRef = useRef<number | null>(null);
+  const geocodeCacheRef = useRef<Map<string, [number, number]>>(new Map());
+  const geocodeRequestRef = useRef(0);
 
   const routeState = (location.state ?? null) as AboutYouLocationState | null;
   const profileSeed = routeState?.profile;
@@ -690,9 +781,82 @@ export default function AboutYouPage() {
     return {
       id: 'profile-location',
       label,
-      location: resolveLocationCoords(label)
+      location: resolvedLocationCoords
     };
+  }, [profile.locationLabel, resolvedLocationCoords]);
+
+  const resolveLocation = async (rawLabel: string) => {
+    const label = rawLabel.trim();
+    const localCoords = resolveKnownLocationCoords(label);
+    if (localCoords) {
+      setResolvedLocationCoords(localCoords);
+      setIsResolvingLocation(false);
+      return;
+    }
+
+    if (!label) {
+      setResolvedLocationCoords(LOCATION_COORDS.paris);
+      setIsResolvingLocation(false);
+      return;
+    }
+
+    const key = normalizeLocationKey(label);
+    if (!key) {
+      setResolvedLocationCoords(LOCATION_COORDS.paris);
+      setIsResolvingLocation(false);
+      return;
+    }
+
+    const cached = geocodeCacheRef.current.get(key);
+    if (cached) {
+      setResolvedLocationCoords(cached);
+      setIsResolvingLocation(false);
+      return;
+    }
+
+    const requestId = geocodeRequestRef.current + 1;
+    geocodeRequestRef.current = requestId;
+    const controller = new AbortController();
+    setIsResolvingLocation(true);
+
+    try {
+      const geocodedCoords = await geocodeWithOpenMeteo(label, controller.signal);
+      if (geocodeRequestRef.current !== requestId) return;
+      if (!geocodedCoords) return;
+      geocodeCacheRef.current.set(key, geocodedCoords);
+      setResolvedLocationCoords(geocodedCoords);
+    } catch {
+      // Keep previous coordinate if remote geocoding fails.
+    } finally {
+      if (geocodeRequestRef.current === requestId) {
+        setIsResolvingLocation(false);
+      }
+      controller.abort();
+    }
+  };
+
+  useEffect(() => {
+    const local = resolveKnownLocationCoords(profile.locationLabel);
+    if (!local) return;
+    setResolvedLocationCoords(local);
   }, [profile.locationLabel]);
+
+  useEffect(() => {
+    const label = profile.locationLabel.trim();
+    if (!label) {
+      setResolvedLocationCoords(LOCATION_COORDS.paris);
+      setIsResolvingLocation(false);
+      return;
+    }
+
+    const local = resolveKnownLocationCoords(label);
+    if (local) return;
+
+    void resolveLocation(label);
+    // Only run when external data sets the initial profile location.
+    // Further user typing is handled with Enter/blur in LocationBlock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingProfile]);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -947,6 +1111,10 @@ export default function AboutYouPage() {
           marker={locationMarker}
           onFieldChange={onFieldChange}
           disabled={!canPersist || loadingProfile}
+          onResolveLocation={label => {
+            void resolveLocation(label);
+          }}
+          isResolvingLocation={isResolvingLocation}
         />
       </motion.div>
 
