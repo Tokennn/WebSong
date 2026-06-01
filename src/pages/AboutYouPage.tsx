@@ -1,4 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ComponentProps,
+  type KeyboardEvent,
+  type ReactNode
+} from 'react';
 import type { User } from '@supabase/supabase-js';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUpRightIcon } from 'lucide-react';
@@ -84,6 +94,10 @@ const DEFAULT_PROFILE: AboutProfile = {
   tiktokUrl: '#',
   xUrl: '#'
 };
+
+const AVATAR_BUCKET = 'profile-avatars';
+const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
 
 const LOCATION_COORDS: Record<string, [number, number]> = {
   paris: [48.8566, 2.3522],
@@ -310,6 +324,23 @@ function isMissingPublicProfileRpcError(error: { message?: string; code?: string
   return message.includes('get_public_about_profile');
 }
 
+function isAvatarStorageConfigurationError(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  const message = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
+  return message.includes('bucket') || message.includes('storage') || message.includes('row-level security');
+}
+
+function getAvatarExtension(file: File): string {
+  if (file.type === 'image/png') return 'png';
+  if (file.type === 'image/webp') return 'webp';
+  if (file.type === 'image/gif') return 'gif';
+  if (file.type === 'image/jpeg') return 'jpg';
+
+  const ext = file.name.split('.').pop()?.trim().toLowerCase();
+  if (ext && /^[a-z0-9]+$/.test(ext)) return ext;
+  return 'jpg';
+}
+
 function Block({ className, ...rest }: BlockProps) {
   return (
     <motion.div
@@ -387,15 +418,36 @@ function InlineTextarea({
 function HeaderBlock({
   profile,
   onFieldChange,
-  disabled
+  disabled,
+  canUploadAvatar,
+  isUploadingAvatar,
+  onUploadAvatarClick
 }: {
   profile: AboutProfile;
   onFieldChange: (key: keyof AboutProfile, value: string) => void;
   disabled: boolean;
+  canUploadAvatar: boolean;
+  isUploadingAvatar: boolean;
+  onUploadAvatarClick: () => void;
 }) {
   return (
     <Block className="col-span-12 row-span-2 md:col-span-6">
-      <img src={profile.avatarUrl} alt="avatar" className="mb-4 size-14 rounded-full object-cover" />
+      <div className="mb-4 flex items-center gap-3">
+        <img src={profile.avatarUrl} alt="avatar" className="size-14 rounded-full object-cover" />
+        {canUploadAvatar ? (
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={onUploadAvatarClick}
+              disabled={disabled || isUploadingAvatar}
+              className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isUploadingAvatar ? 'Upload...' : 'Importer une photo'}
+            </button>
+            <p className="text-[11px] text-zinc-500">JPG, PNG, WEBP ou GIF (5MB max)</p>
+          </div>
+        ) : null}
+      </div>
       <div className="mb-12 text-4xl leading-tight font-medium">
         <div className="mb-2 inline-flex items-center gap-2">
           <span>Hi, I'm</span>
@@ -753,6 +805,7 @@ export default function AboutYouPage() {
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [dbReady, setDbReady] = useState(true);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const lastSyncedJsonRef = useRef(JSON.stringify(DEFAULT_PROFILE));
   const skipAutosaveRef = useRef(false);
@@ -760,6 +813,7 @@ export default function AboutYouPage() {
   const savedBadgeTimeoutRef = useRef<number | null>(null);
   const geocodeCacheRef = useRef<Map<string, [number, number]>>(new Map());
   const geocodeRequestRef = useRef(0);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const routeState = (location.state ?? null) as AboutYouLocationState | null;
   const profileSeed = routeState?.profile;
@@ -1080,8 +1134,89 @@ export default function AboutYouPage() {
     setProfile(current => ({ ...current, [key]: value }));
   };
 
+  const uploadAvatarFile = useCallback(
+    async (file: File) => {
+      if (!user || !canPersist) return;
+      if (!file.type.startsWith('image/')) {
+        setInfoMessage("Le fichier sélectionné n'est pas une image.");
+        return;
+      }
+      if (!ALLOWED_AVATAR_MIME_TYPES.includes(file.type as (typeof ALLOWED_AVATAR_MIME_TYPES)[number])) {
+        setInfoMessage('Format non supporté. Utilise JPG, PNG, WEBP ou GIF.');
+        return;
+      }
+      if (file.size > AVATAR_MAX_SIZE_BYTES) {
+        setInfoMessage('Image trop lourde. Taille max: 5MB.');
+        return;
+      }
+
+      const extension = getAvatarExtension(file);
+      const uniqueId = Math.random().toString(36).slice(2, 9);
+      const objectPath = `${user.id}/${Date.now()}-${uniqueId}.${extension}`;
+
+      setIsUploadingAvatar(true);
+      setSaveState('saving');
+      setInfoMessage(null);
+
+      try {
+        const { error: uploadError } = await supabase.storage.from(AVATAR_BUCKET).upload(objectPath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type
+        });
+
+        if (uploadError) {
+          setSaveState('error');
+          if (isAvatarStorageConfigurationError(uploadError)) {
+            setInfoMessage(
+              "Storage avatar non configuré. Exécute docs/profile_avatars.sql puis recharge la page."
+            );
+          } else {
+            setInfoMessage(uploadError.message);
+          }
+          return;
+        }
+
+        const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(objectPath);
+        const nextAvatarUrl = improveAvatarUrlQuality(data.publicUrl);
+
+        setProfile(current => ({ ...current, avatarUrl: nextAvatarUrl }));
+
+        const { data: updatedUserData } = await supabase.auth.updateUser({
+          data: {
+            avatar_url: nextAvatarUrl
+          }
+        });
+        if (updatedUserData.user) {
+          setUser(updatedUserData.user);
+        }
+      } finally {
+        setIsUploadingAvatar(false);
+      }
+    },
+    [canPersist, user]
+  );
+
+  const handleAvatarInputChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.currentTarget.value = '';
+      if (!file) return;
+      void uploadAvatarFile(file);
+    },
+    [uploadAvatarFile]
+  );
+
   return (
     <div className="min-h-screen bg-neutral-100 px-4 py-12 text-zinc-50">
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept={ALLOWED_AVATAR_MIME_TYPES.join(',')}
+        onChange={handleAvatarInputChange}
+        disabled={!canPersist || loadingProfile || isUploadingAvatar}
+        className="sr-only"
+      />
       <div className="pointer-events-none fixed top-4 right-4 z-20 sm:top-8 sm:right-8">
         <div className="pointer-events-auto">
           <CraftButton asChild>
@@ -1099,7 +1234,14 @@ export default function AboutYouPage() {
         transition={{ staggerChildren: 0.05 }}
         className="mx-auto grid max-w-4xl grid-flow-dense grid-cols-12 gap-4"
       >
-        <HeaderBlock profile={profile} onFieldChange={onFieldChange} disabled={!canPersist || loadingProfile} />
+        <HeaderBlock
+          profile={profile}
+          onFieldChange={onFieldChange}
+          disabled={!canPersist || loadingProfile}
+          canUploadAvatar={canPersist}
+          isUploadingAvatar={isUploadingAvatar}
+          onUploadAvatarClick={() => avatarInputRef.current?.click()}
+        />
         <SocialsBlock
           profile={profile}
           onFieldChange={onFieldChange}

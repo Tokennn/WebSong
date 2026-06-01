@@ -128,8 +128,11 @@ type FinalizeSpotifyAuthResult = {
 
 const getSpotifyClientId = () => (import.meta.env.VITE_SPOTIFY_CLIENT_ID as string | undefined)?.trim() ?? '';
 
-const getSpotifyRedirectUri = () =>
-  typeof window === 'undefined' ? '' : `${window.location.origin}/create`;
+const getSpotifyRedirectUri = () => {
+  const configuredRedirectUri = (import.meta.env.VITE_SPOTIFY_REDIRECT_URI as string | undefined)?.trim();
+  if (configuredRedirectUri) return configuredRedirectUri;
+  return typeof window === 'undefined' ? '' : `${window.location.origin}/create`;
+};
 
 const base64UrlEncode = (input: Uint8Array) => {
   let binary = '';

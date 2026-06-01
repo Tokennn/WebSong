@@ -12,6 +12,7 @@ import GradientText from '@/components/GradientText';
 import ShinyText from '@/components/ShinyText';
 import StaggeredMenu, { type StaggeredMenuItem, type StaggeredMenuSocialItem } from '@/components/StaggeredMenu';
 import { CraftButton, CraftButtonIcon, CraftButtonLabel } from '@/components/ui/craft-button';
+import { improveAvatarUrlQuality } from '@/lib/avatar';
 import { supabase } from '@/lib/supabase';
 
 const IMG_PADDING = 14;
@@ -269,6 +270,7 @@ function CommunityContent({ title, textA, textB, cta }: Omit<CommunitySection, '
 
 export default function CommunityPage() {
   const [authUser, setAuthUser] = useState<User | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -292,6 +294,54 @@ export default function CommunityPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!authUser) {
+      setProfileAvatarUrl(null);
+      return;
+    }
+
+    let active = true;
+
+    void supabase
+      .from('about_profiles')
+      .select('avatar_url')
+      .eq('user_id', authUser.id)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          setProfileAvatarUrl(null);
+          return;
+        }
+        const avatar = typeof data?.avatar_url === 'string' ? data.avatar_url : '';
+        setProfileAvatarUrl(avatar ? improveAvatarUrlQuality(avatar) : null);
+      });
+
+    const channel = supabase
+      .channel(`community-avatar-${authUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'about_profiles',
+          filter: `user_id=eq.${authUser.id}`
+        },
+        payload => {
+          const next = payload.new as { avatar_url?: string } | null;
+          const avatar = typeof next?.avatar_url === 'string' ? next.avatar_url : '';
+          setProfileAvatarUrl(avatar ? improveAvatarUrlQuality(avatar) : null);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
+  }, [authUser]);
+
   const handleSignOut = useCallback(() => {
     void supabase.auth.signOut().finally(() => {
       window.location.assign('/sign-in');
@@ -310,7 +360,7 @@ export default function CommunityPage() {
     [authUser, handleSignOut]
   );
 
-  const avatarSrc = getOAuthAvatarUrl(authUser);
+  const avatarSrc = profileAvatarUrl || getOAuthAvatarUrl(authUser);
   const avatarInitial = authUser?.email?.charAt(0).toUpperCase() || 'U';
 
   return (

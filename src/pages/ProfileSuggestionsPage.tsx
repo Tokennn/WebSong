@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeftIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -90,31 +90,58 @@ export default function ProfileSuggestionsPage() {
   const [items, setItems] = useState<RubixProfileItem[]>([]);
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
+  const loadSuggestions = useCallback(async () => {
+    const { data, error } = await supabase.rpc('get_published_profile_suggestions', { limit_count: 14 });
+    if (error) {
+      setItems([]);
+      return;
+    }
+    const mapped = ((data as ProfileSuggestionRow[] | null) ?? []).map(toSuggestionItem);
+    setItems(mapped);
+  }, []);
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
 
   useEffect(() => {
-    let active = true;
+    void loadSuggestions();
 
-    void supabase
-      .rpc('get_published_profile_suggestions', { limit_count: 14 })
-      .then(({ data, error }) => {
-        if (!active) return;
-
-        if (error) {
-          setItems([]);
-          return;
+    const aboutProfilesChannel = supabase
+      .channel('profile-suggestions-about-profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'about_profiles'
+        },
+        () => {
+          void loadSuggestions();
         }
+      )
+      .subscribe();
 
-        const mapped = ((data as ProfileSuggestionRow[] | null) ?? []).map(toSuggestionItem);
-        setItems(mapped);
-      });
+    const publishedProfilesChannel = supabase
+      .channel('profile-suggestions-published-profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'published_profiles'
+        },
+        () => {
+          void loadSuggestions();
+        }
+      )
+      .subscribe();
 
     return () => {
-      active = false;
+      void supabase.removeChannel(aboutProfilesChannel);
+      void supabase.removeChannel(publishedProfilesChannel);
     };
-  }, []);
+  }, [loadSuggestions]);
 
   const displayItems = useMemo(() => {
     if (items.length === 0) return FALLBACK_SUGGESTIONS;
