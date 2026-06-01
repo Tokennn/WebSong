@@ -803,7 +803,12 @@ export const AuthComponent = ({
   );
 
   return (
-    <div className={cn('dark flex min-h-screen min-h-svh min-h-dvh w-full flex-col bg-black text-white', className)}>
+    <div
+      className={cn(
+        'dark relative isolate flex min-h-screen min-h-svh min-h-dvh w-full flex-col overflow-hidden bg-black text-white',
+        className
+      )}
+    >
       <style>{`
         input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:none!important}
         input[type="password"]::-webkit-credentials-auto-fill-button,input[type="password"]::-webkit-strong-password-auto-fill-button{display:none!important}
@@ -840,15 +845,15 @@ export const AuthComponent = ({
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          'relative flex min-h-screen min-h-svh min-h-dvh w-full flex-1 items-center justify-center overflow-hidden bg-transparent'
-        )}
-      >
-        {useGradientBackground ? <div className="absolute inset-0 z-0 opacity-35"><GradientBackground /></div> : null}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        {useGradientBackground ? (
+          <div className="absolute inset-0 opacity-35">
+            <GradientBackground />
+          </div>
+        ) : null}
         {!useGradientBackground ? (
           <Grainient
-            className="absolute inset-0 z-0"
+            className="absolute inset-0 h-full w-full"
             color1="#f4f4f4"
             color2="#9a9a9a"
             color3="#050505"
@@ -873,6 +878,13 @@ export const AuthComponent = ({
             zoom={0.86}
           />
         ) : null}
+      </div>
+
+      <div
+        className={cn(
+          'relative z-10 flex min-h-screen min-h-svh min-h-dvh w-full flex-1 items-center justify-center overflow-hidden bg-transparent'
+        )}
+      >
 
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-4">
           <fieldset
