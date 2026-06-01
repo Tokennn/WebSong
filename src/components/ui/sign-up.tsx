@@ -356,6 +356,23 @@ const modalSteps = [
 ];
 const TEXT_LOOP_INTERVAL = 1.5;
 const POST_AUTH_PATH = '/about-you';
+const PASSWORD_RESET_PATH = '/sign-in';
+
+function isRecoveryRequestInUrl() {
+  if (typeof window === 'undefined') return false;
+  const searchType = new URLSearchParams(window.location.search).get('type');
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const hashType = new URLSearchParams(hash).get('type');
+  return searchType === 'recovery' || hashType === 'recovery';
+}
+
+function clearRecoveryParamsFromUrl() {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  url.searchParams.delete('type');
+  const next = `${url.pathname}${url.search}`;
+  window.history.replaceState({}, document.title, next);
+}
 
 const DefaultLogo = () => (
   <div className="rounded-md bg-primary p-1.5 text-primary-foreground">
@@ -390,11 +407,13 @@ export const AuthComponent = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [authStep, setAuthStep] = useState<'email' | 'password' | 'confirmPassword'>('email');
+  const [isPasswordRecoveryFlow, setIsPasswordRecoveryFlow] = useState(false);
   const [modalStatus, setModalStatus] = useState<'closed' | 'loading' | 'error' | 'success'>('closed');
   const [modalErrorMessage, setModalErrorMessage] = useState('');
   const [modalSuccessMessage, setModalSuccessMessage] = useState('Welcome Aboard!');
   const confettiRef = useRef<ConfettiRef>(null);
   const hasRedirectedAfterAuthRef = useRef(false);
+  const isPasswordRecoveryFlowRef = useRef(false);
 
   const isEmailValid = /\S+@\S+\.\S+/.test(email);
   const isPasswordValid = password.length >= 6;
@@ -419,6 +438,8 @@ export const AuthComponent = ({
 
   const getAuthRedirectTo = () =>
     typeof window === 'undefined' ? undefined : `${window.location.origin}${POST_AUTH_PATH}`;
+  const getPasswordResetRedirectTo = () =>
+    typeof window === 'undefined' ? undefined : `${window.location.origin}${PASSWORD_RESET_PATH}`;
 
   const redirectAfterAuth = useCallback(() => {
     if (hasRedirectedAfterAuthRef.current) return;
@@ -487,6 +508,33 @@ export const AuthComponent = ({
       setModalStatus('success');
     } catch (error) {
       handleAuthError('Unable to send magic link.', error);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!isEmailValid) {
+      setModalErrorMessage('Enter your email first to receive a reset link.');
+      setModalStatus('error');
+      return;
+    }
+    if (modalStatus !== 'closed') return;
+
+    setModalStatus('loading');
+    try {
+      const redirectTo = getPasswordResetRedirectTo();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo
+      });
+
+      if (error) {
+        handleAuthError('Unable to send password reset email.', error);
+        return;
+      }
+
+      setModalSuccessMessage('Password reset email sent. Check your inbox.');
+      setModalStatus('success');
+    } catch (error) {
+      handleAuthError('Unable to send password reset email.', error);
     }
   };
 
@@ -563,6 +611,41 @@ export const AuthComponent = ({
     }
   };
 
+  const handlePasswordRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (modalStatus !== 'closed') return;
+
+    if (!isPasswordValid) {
+      setModalErrorMessage('Password must contain at least 6 characters.');
+      setModalStatus('error');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setModalErrorMessage('Passwords do not match!');
+      setModalStatus('error');
+      return;
+    }
+
+    setModalStatus('loading');
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        handleAuthError('Unable to update password.', error);
+        return;
+      }
+
+      setIsPasswordRecoveryFlow(false);
+      isPasswordRecoveryFlowRef.current = false;
+      setModalSuccessMessage('Password updated successfully. Redirecting...');
+      setModalStatus('success');
+      window.setTimeout(() => {
+        redirectAfterAuth();
+      }, 600);
+    } catch (error) {
+      handleAuthError('Unable to update password.', error);
+    }
+  };
+
   const handleProgressStep = () => {
     if (authStep === 'email' && isEmailValid) setAuthStep('password');
     if (authStep === 'password' && isPasswordValid) {
@@ -598,6 +681,7 @@ export const AuthComponent = ({
   useEffect(() => {
     setAuthMode(initialAuthMode);
     setAuthStep('email');
+    setIsPasswordRecoveryFlow(false);
     setPassword('');
     setConfirmPassword('');
     setShowPassword(false);
@@ -608,22 +692,50 @@ export const AuthComponent = ({
   }, [initialAuthMode]);
 
   useEffect(() => {
+    isPasswordRecoveryFlowRef.current = isPasswordRecoveryFlow;
+  }, [isPasswordRecoveryFlow]);
+
+  useEffect(() => {
     if (authStep === 'password') window.setTimeout(() => passwordInputRef.current?.focus(), 500);
     if (authStep === 'confirmPassword') window.setTimeout(() => confirmPasswordInputRef.current?.focus(), 500);
   }, [authStep]);
 
   useEffect(() => {
     let isMounted = true;
+    const recoveryFromUrl = isRecoveryRequestInUrl();
+    if (recoveryFromUrl) {
+      setIsPasswordRecoveryFlow(true);
+      isPasswordRecoveryFlowRef.current = true;
+      setAuthStep('password');
+      setModalStatus('closed');
+      setModalErrorMessage('');
+      clearRecoveryParamsFromUrl();
+    }
 
     void supabase.auth.getSession().then(({ data }) => {
       if (!isMounted) return;
+      if (recoveryFromUrl) return;
       if (data.session) {
         redirectAfterAuth();
       }
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecoveryFlow(true);
+        isPasswordRecoveryFlowRef.current = true;
+        setAuthStep('password');
+        setPassword('');
+        setConfirmPassword('');
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+        setModalStatus('closed');
+        setModalErrorMessage('');
+        clearRecoveryParamsFromUrl();
+        return;
+      }
       if (!session) return;
+      if (isPasswordRecoveryFlowRef.current) return;
       redirectAfterAuth();
     });
 
@@ -764,7 +876,7 @@ export const AuthComponent = ({
             className="pointer-events-auto relative flex w-full max-w-[340px] flex-col items-center gap-8 p-4"
           >
           <AnimatePresence mode="wait">
-            {authStep === 'email' ? (
+            {authStep === 'email' && !isPasswordRecoveryFlow ? (
               <motion.div
                 key="email-content"
                 initial={{ y: 6, opacity: 0 }}
@@ -833,7 +945,7 @@ export const AuthComponent = ({
               </motion.div>
             ) : null}
 
-            {authStep === 'password' ? (
+            {authStep === 'password' && !isPasswordRecoveryFlow ? (
               <motion.div
                 key="password-title"
                 initial={{ y: 6, opacity: 0 }}
@@ -876,11 +988,33 @@ export const AuthComponent = ({
                 </BlurFade>
               </motion.div>
             ) : null}
+
+            {authStep === 'password' && isPasswordRecoveryFlow ? (
+              <motion.div
+                key="recovery-title"
+                initial={{ y: 6, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="flex w-full flex-col items-center gap-4 text-center"
+              >
+                <BlurFade delay={0} className="w-full">
+                  <div className="text-center">
+                    <p className={titleClass}>Reset your password</p>
+                  </div>
+                </BlurFade>
+                <BlurFade delay={0.25}>
+                  <p className="text-sm font-medium text-zinc-300">
+                    Enter a new password, then confirm it to finish recovery.
+                  </p>
+                </BlurFade>
+              </motion.div>
+            ) : null}
           </AnimatePresence>
 
-          <form onSubmit={handleFinalSubmit} className="w-[300px] space-y-6">
+          <form onSubmit={isPasswordRecoveryFlow ? handlePasswordRecoverySubmit : handleFinalSubmit} className="w-[300px] space-y-6">
             <AnimatePresence>
-              {authStep !== 'confirmPassword' ? (
+              {authStep !== 'confirmPassword' && !isPasswordRecoveryFlow ? (
                 <motion.div
                   key="email-password-fields"
                   exit={{ opacity: 0, filter: 'blur(4px)' }}
@@ -1028,6 +1162,17 @@ export const AuthComponent = ({
                           </div>
                         </div>
                         <BlurFade inView delay={0.2}>
+                          {authMode === 'signIn' ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleForgotPassword()}
+                              className="mt-2 text-sm text-zinc-300 underline-offset-2 transition-colors hover:text-white hover:underline"
+                            >
+                              Forgot password?
+                            </button>
+                          ) : null}
+                        </BlurFade>
+                        <BlurFade inView delay={0.25}>
                           <button
                             type="button"
                             onClick={handleGoBack}
@@ -1044,7 +1189,82 @@ export const AuthComponent = ({
             </AnimatePresence>
 
             <AnimatePresence>
-              {authStep === 'confirmPassword' && authMode === 'signUp' ? (
+              {isPasswordRecoveryFlow ? (
+                <BlurFade key="recovery-passwords" className="w-full">
+                  <div className="space-y-4">
+                    <div className="relative w-full">
+                      <div className="glass-input-wrap w-full">
+                        <div className="glass-input">
+                          <span className="glass-input-text-area" />
+                          <div className="relative z-10 flex w-10 flex-shrink-0 items-center justify-center pl-2">
+                            <button
+                              type="button"
+                              aria-label="Toggle password visibility"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="rounded-full p-2 text-foreground/80 transition-colors hover:text-foreground"
+                            >
+                              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </button>
+                          </div>
+                          <input
+                            ref={passwordInputRef}
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="New password"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            className="relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative w-full">
+                      <div className="glass-input-wrap w-full">
+                        <div className="glass-input">
+                          <span className="glass-input-text-area" />
+                          <div className="relative z-10 flex w-10 flex-shrink-0 items-center justify-center pl-2">
+                            <button
+                              type="button"
+                              aria-label="Toggle confirm password visibility"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="rounded-full p-2 text-foreground/80 transition-colors hover:text-foreground"
+                            >
+                              {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </button>
+                          </div>
+                          <input
+                            ref={confirmPasswordInputRef}
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            placeholder="Confirm new password"
+                            value={confirmPassword}
+                            onChange={e => setConfirmPassword(e.target.value)}
+                            className="relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none"
+                          />
+                          <div
+                            className={cn(
+                              'relative z-10 flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out',
+                              isPasswordValid && password === confirmPassword ? 'w-10 pr-1' : 'w-0'
+                            )}
+                          >
+                            <GlassButton
+                              type="submit"
+                              size="icon"
+                              aria-label="Update password"
+                              contentClassName="text-foreground/80 hover:text-foreground"
+                            >
+                              <ArrowRight className="h-5 w-5" />
+                            </GlassButton>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </BlurFade>
+              ) : null}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {authStep === 'confirmPassword' && authMode === 'signUp' && !isPasswordRecoveryFlow ? (
                 <BlurFade key="confirm-password-field" className="w-full">
                   <div className="relative w-full">
                     <AnimatePresence>
