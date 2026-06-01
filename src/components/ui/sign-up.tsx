@@ -415,7 +415,8 @@ export const AuthComponent = ({
   const hasRedirectedAfterAuthRef = useRef(false);
   const isPasswordRecoveryFlowRef = useRef(false);
 
-  const isEmailValid = /\S+@\S+\.\S+/.test(email);
+  const normalizedEmail = email.trim().toLowerCase();
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
   const isPasswordValid = password.length >= 6;
   const isConfirmPasswordValid = confirmPassword.length >= 6;
 
@@ -492,7 +493,7 @@ export const AuthComponent = ({
     try {
       const redirectTo = getAuthRedirectTo();
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: {
           emailRedirectTo: redirectTo,
           shouldCreateUser: false
@@ -522,7 +523,7 @@ export const AuthComponent = ({
     setModalStatus('loading');
     try {
       const redirectTo = getPasswordResetRedirectTo();
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo
       });
 
@@ -554,7 +555,7 @@ export const AuthComponent = ({
     setModalStatus('loading');
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password
       });
 
@@ -589,7 +590,7 @@ export const AuthComponent = ({
     try {
       const redirectTo = getAuthRedirectTo();
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: redirectTo ? { emailRedirectTo: redirectTo } : undefined
       });
