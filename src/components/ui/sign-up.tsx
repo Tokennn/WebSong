@@ -803,7 +803,7 @@ export const AuthComponent = ({
   );
 
   return (
-    <div className={cn('dark flex min-h-screen min-h-dvh w-full flex-col bg-black text-white', className)}>
+    <div className={cn('dark flex min-h-screen min-h-svh min-h-dvh w-full flex-col bg-black text-white', className)}>
       <style>{`
         input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:none!important}
         input[type="password"]::-webkit-credentials-auto-fill-button,input[type="password"]::-webkit-strong-password-auto-fill-button{display:none!important}
@@ -840,7 +840,11 @@ export const AuthComponent = ({
         </div>
       ) : null}
 
-      <div className={cn('relative flex h-full w-full flex-1 items-center justify-center overflow-hidden bg-transparent')}>
+      <div
+        className={cn(
+          'relative flex min-h-screen min-h-svh min-h-dvh w-full flex-1 items-center justify-center overflow-hidden bg-transparent'
+        )}
+      >
         {useGradientBackground ? <div className="absolute inset-0 z-0 opacity-35"><GradientBackground /></div> : null}
         {!useGradientBackground ? (
           <Grainient

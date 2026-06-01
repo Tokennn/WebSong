@@ -23,7 +23,7 @@ function AnimatedPage({ children, reducedMotion }: { children: ReactNode; reduce
         duration: reducedMotion ? 0.12 : 0.3,
         ease: [0.22, 1, 0.36, 1]
       }}
-      className="min-h-screen min-h-dvh will-change-[opacity]"
+      className="min-h-screen min-h-svh min-h-dvh will-change-[opacity]"
     >
       {children}
     </motion.div>
@@ -71,8 +71,8 @@ function App() {
   }, []);
 
   return (
-    <div className="relative min-h-screen min-h-dvh overflow-x-clip bg-white">
-      <Suspense fallback={<div className="min-h-screen min-h-dvh w-full bg-white" />}>
+    <div className="relative min-h-screen min-h-svh min-h-dvh overflow-x-clip bg-white">
+      <Suspense fallback={<div className="min-h-screen min-h-svh min-h-dvh w-full bg-white" />}>
         <Routes location={location} key={routeKey}>
           <Route
             path="/"
