@@ -1,0 +1,18 @@
+.root{
+    -fx-background-color:   #000000;
+    -fx-background-radius: 7%;
+}
+
+.button {
+    -fx-background-color: #d6bfbf73;
+    -fx-background-radius: 15;
+}
+
+.otherB {
+    -fx-background-color: #ffb701;
+    -fx-background-radius: 15;
+}
+.buttonC {
+    -fx-background-color: #ffffffab;
+    -fx-background-radius: 15;
+}

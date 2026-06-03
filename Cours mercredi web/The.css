@@ -1,0 +1,420 @@
+💠ㅍ $olo® ㅍ💠 — Aujourd’hui à 11:57
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Site Web</title>
+    <link rel="stylesheet" href="/The.css">
+</head>
+<body>
+    <header>
+        <h1>Mon Site Web</h1>
+        <nav>
+            <ul>
+                <li><a href="#">Accueil</a></li>
+                <li><a href="#">À propos</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Section 1</h2>
+            <p>Ceci est le contenu de la section 1.</p>
+        </section>
+        <section>
+            <h2>Section 2</h2>
+            <p>Ceci est le contenu de la section 2.</p>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2023 Mon Site Web</p>
+    </footer>
+</body>
+</html>
+`
+`
+/* Reset des marges et des espacements par défaut */
+body, h1, h2, p, ul {
+    margin: 0;
+    padding: 0;
+}
+
+/* Style de base */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+header {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 10px;
+}
+
+nav ul {
+    list-style: none;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 20px;
+}
+
+a {
+    text-decoration: none;
+    color: #fff;
+}
+
+main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+section {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+footer {
+    text-align: center;
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+}
+`
+Stanislas — Aujourd’hui à 12:14
+:root {
+    --yellow : #EBD96B;
+    --sales-yellow-top : #F9DF56;
+    --sales-yellow-bottom : #E0C340;
+    --darker-yellow: #E5C643;
+    --grey : #F4F6F5;
+Afficher plus
+message.txt
+6 Ko
+﻿
+Stanislas
+stanislasx
+PAKI ! One tape machine !
+:root {
+    --yellow : #EBD96B;
+    --sales-yellow-top : #F9DF56;
+    --sales-yellow-bottom : #E0C340;
+    --darker-yellow: #E5C643;
+    --grey : #F4F6F5;
+    --grey-text : #7F7F7F;
+    font-size: 24px;
+}
+
+body {
+    font-family: 'Poppins regular', sans-serif;
+    display: flex;
+    margin: 0px;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+}
+
+section {
+    margin-top: 2rem;
+    width: 100%;
+}
+
+p {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.navbar-image {
+    max-width: 1rem;
+    max-height: 1rem;
+}
+
+.logo {
+    float: left;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-weight: 900;
+    font-size: medium;
+}
+
+#mobile-navbar-elements {
+    float: right;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+#extended-header-navbar {
+    display: none;
+}
+
+#extended-navbar-elements {
+    float: right;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font: "Poppins medium", 22px, black;
+}
+
+#signup {
+    background-color: black;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem 0.4rem 0.8rem;
+    border-radius: 0.5rem;
+}
+
+#landing {
+    background-color: var(--grey);
+    border-radius: 1rem;
+    margin: 1rem;
+    width: 90%;
+    display: flex;
+    justify-content: space-around;
+}
+
+.description {
+    display: flex;
+    flex-direction: column;
+    margin: 1rem;
+    min-width: 33%;
+}
+
+h1 {
+    font-weight: 900;
+    font-size: xx-large;
+    margin: 0.5rem 0rem 0.5rem 0rem;
+}
+
+h2 {
+    font-weight: 900;
+    font-size: x-large;
+    margin: 0rem 0rem 0.5rem 0rem;
+}
+
+.text-white-bg {
+    background-color: white;
+}
+
+.text-yellow-bg {
+    background-color: var(--yellow);
+}
+
+p {
+    font-size: large;
+    font-weight: 400;
+}
+
+.big-img {
+    display: none;
+}
+
+#shop-now {
+    display: flex;   
+    align-items: center;
+    justify-content: space-around;
+}
+
+#leaf {
+    fill: var(--yellow);
+    width: 5rem;
+    height: 1.5rem;
+}
+
+.shop-now-btn {
+    background-color: black;
+    color: white;
+    font-size: medium;
+    border: none;
+    padding: 0.5rem 1rem 0.5rem 1rem;
+    border-radius: 0.5rem;
+}
+
+#brands {
+    height: 4rem;
+    width: 100%;
+    margin: none;
+    background-color: var(--yellow);
+    display: flex;
+    align-items: center;
+}
+
+#new-arrivals {
+    display: flex;
+    flex-direction: column;
+}
+
+#new-arrivals {
+    margin-left: 7%;
+}
+
+.categories {
+    display: flex;
+    width: 93%;
+    overflow-x: scroll;
+    overflow-y: hidden;
+}
+
+.categories-element {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    width: 90%;
+    height: 90%;
+    margin-right: 25px;
+}
+
+.category-big-text {
+    font-size: large;
+}
+
+.category-small-text {
+    font-size: medium;
+    color: var(--grey-text);
+}
+
+/* TODO fix dégradé merdique ohlala */
+#sale {
+    display: flex;
+    width: 100%;
+    background: linear-gradient(0deg, var(--sales-yellow-bottom), var(--sales-yellow-top));
+}
+
+#children-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+#app {
+    display: flex;
+    flex-wrap: wrap-reverse;
+    justify-content: space-around;
+    align-items: center;
+}
+
+#app-description {
+    display: flex;
+    flex-direction: column;
+}
+
+#stores-div {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+#apple-store-btn {
+    display: block;
+    width: 35%;
+    height: 2.5rem;   
+}
+
+#play-store-btn {
+    display: block;
+    width: 40%;
+    height: 4rem;
+}
+
+.store-img {
+    height: 100%;
+    width: auto;
+}
+
+#mailing-list {
+    width: 100%;
+    margin: none;
+    background-color: var(--darker-yellow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: white;
+    text-align: center;
+}
+
+footer {
+    width: 100%;
+    padding: 25px 10px 15px 30px;
+    display: flex;
+    justify-content: space-around;
+    color: var(--grey-text);
+    background-color: black;
+}
+
+#about-social-media {
+    width: 40%;
+}
+
+#social-media-btns {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+}
+
+.social-img {
+    width: 40px;
+    height: auto;
+}
+
+.about-links {
+    width: 20%;
+}
+
+.white-text {
+    color: white;
+}
+
+/* Pour ordinateurs */
+@media (min-width: 1024px) {
+    #mobile-header-navbar {
+        display: none;
+    }
+
+    #extended-header-navbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+}
+
+/* Pour ordinateurs et tablettes */
+@media (min-width: 768px) {
+    .big-img {
+        display: flex;
+        height: 100%;
+        width: auto;
+    }
+
+    .categories {
+        overflow-x:unset;
+        display: flex;
+        justify-content: space-around;
+    }
+
+    .categories-element.arrivals {
+        min-width: 25%;
+        min-height: 25%;
+        max-width: 28%;
+        max-height: 28%;
+    }
+
+    .categories-element.young {
+        width: 40%;
+        height: 40%;
+    }
+
+    #app-description, #app-img {
+        width: 40%;
+        height: 40%;
+    }
+}
