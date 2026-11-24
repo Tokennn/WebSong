@@ -111,9 +111,6 @@ export class Wolf extends Entity {
     });
   }
 
-  protected override onDeath(g: GameContext): void {
-    g.fx.burst(this.x, this.y, [120, 30, 26], 8);
-  }
 }
 
 /** Chien-loup de profil, tête vers la droite, pattes au sol en y = 0 (largeurs de case). */

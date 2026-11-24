@@ -18,7 +18,7 @@ import { Entity } from '../entities/Entity';
 import { Player } from '../entities/Player';
 import { Dragon } from '../entities/Dragon';
 import { populate } from '../entities/spawner';
-import { Fx } from '../fx/Fx';
+import { DRIED, Fx, type Stain } from '../fx/Fx';
 import { Hud } from '../ui/Hud';
 import { Minimap } from '../ui/Minimap';
 import { saveHero, type SavedHero } from '../character/storage';
@@ -40,8 +40,14 @@ const FOG: RGB = [9, 11, 19];
 /** Zoom de départ : le héros fait une dizaine de lignes de haut. */
 const ZOOM_DEFAULT = 4.4;
 /** Taille maximale d'un sprite (cases), pour borner le coût d'un dragon tout proche. */
-const MAX_SPRITE_COLS = 260;
-const MAX_SPRITE_ROWS = 150;
+const MAX_SPRITE_COLS = 400;
+const MAX_SPRITE_ROWS = 230;
+/**
+ * Hauteur des glyphes en px : petits et nombreux, comme une image fine en ASCII.
+ * Le cadrage, lui, est réglé pour des glyphes de 15 px (12 px sur petit écran).
+ */
+const CELL_H = 10;
+const CELL_H_SMALL = 8;
 
 /** Sprite en cours de dessin : ses cases sont placées autour de son point projeté. */
 interface SpriteOrigin {
@@ -213,9 +219,11 @@ export class GameScene implements Scene {
     const w = this.root.clientWidth;
     const h = this.root.clientHeight;
     if (!w || !h) return;
-    const cellH = Math.min(w, h) < 640 ? 12 : 15;
+    const small = Math.min(w, h) < 640;
+    const cellH = small ? CELL_H_SMALL : CELL_H;
     const c = this.canvas;
     c.resize(w, h, cellH, ASPECT);
+    this.cam.cellScale = (small ? 12 : 15) / cellH;
     this.cam.setViewport(c.cols, c.rows, c.cellW, c.cellH);
     this.composer.resize(c.cols, c.rows);
     this.renderer?.resize(c.cols, c.rows);
@@ -424,6 +432,8 @@ export class GameScene implements Scene {
       this.contactShadow(o.sx, o.sy, o.scale, e instanceof Player ? 0.9 : e.radius + 0.25, o.depth);
       this.origin = null;
     }
+    // Sang au sol : sous les silhouettes et sous l'herbe haute.
+    for (const st of this.fx.stains) if (this.onScreen(st.x, st.y, 3)) this.drawStain(st);
     const list: Drawable[] = [];
     for (const pr of this.props) {
       const r = PROP_SHADOW[pr.kind];
@@ -506,6 +516,57 @@ export class GameScene implements Scene {
         const d = dx * dx + dy * dy;
         if (d < 1) c.darken(x, y, 0.35 + 0.65 * d);
       }
+    }
+  }
+
+  /**
+   * Tache de sang : teinte le sol déjà dessiné (le grain de l'herbe ou de la pierre
+   * reste visible à travers), rouge vif puis brun en séchant ; une flaque fraîche
+   * garde un reflet humide. Rien sur un mur qui passe devant.
+   */
+  private drawStain(st: Stain): void {
+    const c = this.canvas;
+    const h = this.relief.walkHeight(st.x, st.y);
+    const P = this.shown.projectTile(st.x, st.y, h, this.proj);
+    if (P.x < -20 || P.x > c.cols + 20 || P.y < -10 || P.y > c.rows + 10) return;
+    const s = this.scaleAt(st.x, st.y, h);
+    const grow = st.grow > 0 ? Math.sqrt(Math.min(1, st.age / st.grow)) : 1;
+    const dry = clamp(st.age / 25, 0, 1);
+    const fade = clamp((st.life - st.age) / 15, 0, 1);
+    const col = st.color;
+    const r = col[0] + (DRIED[0] - col[0]) * dry;
+    const g = col[1] + (DRIED[1] - col[1]) * dry;
+    const b = col[2] + (DRIED[2] - col[2]) * dry;
+    // Teinte multiplicative : garde l'éclairage déjà calculé du sol.
+    const mr = (r / 255) * 2.1;
+    const mg = (g / 255) * 2.1;
+    const mb = (b / 255) * 2.1;
+    const k = tone(this.lightAt(st.x, st.y));
+    const fy = (0.55 * s) / ASPECT;
+    for (let n = 0; n < st.dots.length; n++) {
+      const d = st.dots[n];
+      const sx = P.x + d.dx * s * grow;
+      const sy = P.y + d.dy * fy * grow;
+      const rx = Math.max(0.45, d.r * grow * s);
+      const ry = Math.max(0.4, d.r * grow * fy);
+      for (let y = Math.floor(sy - ry); y <= Math.ceil(sy + ry); y++) {
+        for (let x = Math.floor(sx - rx); x <= Math.ceil(sx + rx); x++) {
+          if (x < 0 || y < 0 || x >= c.cols || y >= c.rows) continue;
+          const i = y * c.cols + x;
+          if (this.composer.depth[i] < P.depth - 2.2) continue;
+          const dx = (x + 0.5 - sx) / rx;
+          const dy = (y + 0.5 - sy) / ry;
+          const q = dx * dx + dy * dy;
+          if (q >= 1) continue;
+          const a = fade * (q < 0.55 ? 0.95 : (1 - q) * 2.1);
+          if (c.ch[i] === ' ' && q < 0.6) {
+            // Sol nu ou très sombre : le sang forme sa propre matière.
+            c.set(x, y, q < 0.25 && rx > 1.5 ? '%' : ':', r * k * 0.8 * fade, g * k * 0.8 * fade, b * k * 0.8 * fade);
+          } else c.tint(x, y, mr, mg, mb, a);
+        }
+      }
+      // Reflet humide de la flaque, du côté de la lumière.
+      if (n === 0 && dry < 0.6 && rx > 1.6) c.tint(Math.floor(sx - rx * 0.35), Math.floor(sy - ry * 0.35), 1.9, 1.1, 1.05, 0.55 * (1 - dry) * fade);
     }
   }
 
@@ -642,13 +703,13 @@ export class GameScene implements Scene {
   }
 
   /** Case d'écran d'un point du monde : relatif au sprite en cours, sinon projeté au sol. */
-  private cellOf(wx: number, wy: number): boolean {
+  private cellOf(wx: number, wy: number, h = 1.1): boolean {
     const o = this.origin;
     if (o) {
       this.cx = Math.floor(o.sx + wx + 0.5 - o.ex);
       this.cy = Math.floor(o.sy + wy + 0.5 - o.ey);
     } else {
-      const P = this.shown.projectTile(wx + 0.5, wy + 0.5, this.relief.walkHeight(wx + 0.5, wy + 0.5) + 1.1, this.proj);
+      const P = this.shown.projectTile(wx + 0.5, wy + 0.5, this.relief.walkHeight(wx + 0.5, wy + 0.5) + h, this.proj);
       this.cx = Math.floor(P.x);
       this.cy = Math.floor(P.y);
     }
@@ -708,7 +769,7 @@ export class GameScene implements Scene {
       }
     },
     put: (wx: number, wy: number, ch: string, col: RGB, opts?: PutOptions) => {
-      if (ch === ' ' || !this.cellOf(wx, wy)) return;
+      if (ch === ' ' || !this.cellOf(wx, wy, opts?.h)) return;
       const c = this.canvas;
       const { cx, cy } = this;
       const o = this.origin;

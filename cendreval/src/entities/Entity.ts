@@ -60,10 +60,17 @@ export abstract class Entity {
       this.kbx = d.x * this.knockback;
       this.kby = d.y * this.knockback;
     }
-    g.fx.blood(this.x, this.y, this.bloodColor);
+    // Le sang gicle dans le sens du coup, plus fort pour un coup lourd.
+    const dir = from ? vdir(from.x, from.y, this.x, this.y) : { x: Math.random() - 0.5, y: Math.random() - 0.5 };
+    const n = Math.round(Math.min(26, 6 + (dmg / this.maxHp) * 40));
+    g.fx.blood(this.x, this.y, this.bloodColor, dir.x, dir.y, n, this.spriteTop * 0.5);
     if (this.hp <= 0) {
       this.hp = 0;
       this.alive = false;
+      if (!this.flying) {
+        g.fx.blood(this.x, this.y, this.bloodColor, dir.x, dir.y, 18, this.spriteTop * 0.35);
+        g.fx.pool(this.x, this.y, this.bloodColor, this.radius * 1.8 + 0.5);
+      }
       this.onDeath(g);
     }
   }

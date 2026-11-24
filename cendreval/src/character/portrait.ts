@@ -1,9 +1,13 @@
 import { shadeHex } from '../render/color';
 import type { Appearance, BodyId } from './appearance';
 
-/** Le portrait occupe 40 × 40 cases (soit 40 × 56 unités isotropes). */
-export const PORTRAIT_COLS = 40;
-export const PORTRAIT_ROWS = 40;
+/**
+ * Le héros est dessiné dans un cadre de 40 × 56 unités. Le portrait le rastérise
+ * sur 60 × 60 glyphes (une unité = 1,5 colonne) : des glyphes petits et nombreux.
+ */
+export const PORTRAIT_SCALE = 1.5;
+export const PORTRAIT_COLS = 40 * PORTRAIT_SCALE;
+export const PORTRAIT_ROWS = 40 * PORTRAIT_SCALE;
 
 const TAU = Math.PI * 2;
 
@@ -24,6 +28,17 @@ export interface HeroPose {
   turn?: number;
 }
 
+/** Réglages de l'aperçu (page d'accueil) : angle libre et gros plan. */
+export interface HeroView {
+  /** Rotation du corps en radians : 0 = de face, π/2 = profil vers +x, π = de dos. */
+  yaw?: number;
+  /** Ajoute les petits détails du visage et du casque (gros plan). */
+  detail?: boolean;
+}
+
+/** Angle de l'aperçu par défaut : trois quarts face. */
+export const HERO_REST_YAW = 0.33;
+
 /**
  * Gabarit : largeur du tronc et épaisseur des membres. Le squelette, lui, est le
  * même pour tous : environ 7,3 têtes de haut, jambes = moitié de la taille.
@@ -41,6 +56,8 @@ const ANKLE_H = 1.55;
 const UPPER_ARM = 7.9;
 const FOREARM = 6.9;
 const BLADE = 12.5;
+/** Centre du visage au repos (unités du portrait) : cible du gros plan. */
+export const HERO_HEAD_Y = HERO_FEET_Y - ANKLE_H - THIGH - SHIN * Math.cos(0.05) - 19.7 + 0.6;
 /** Vu un peu d'en haut : ce qui avance vers nous descend à l'écran. */
 const TILT = 0.16;
 /** Lumière principale : en haut à gauche de l'écran. */
@@ -130,7 +147,7 @@ const lerp3 = (a: V3, b: V3, k: number): V3 => [a[0] + (b[0] - a[0]) * k, a[1] +
  * bandes de tissu qui flottent. Le même dessin sert au portrait et au jeu, où
  * SpriteRaster le convertit en glyphes.
  */
-export function drawHero(ctx: CanvasRenderingContext2D, a: Appearance, t: number, pose?: HeroPose): void {
+export function drawHero(ctx: CanvasRenderingContext2D, a: Appearance, t: number, pose?: HeroPose, view?: HeroView): void {
   const cx = HERO_CENTER_X;
   const { w: wk, limb: lk } = BUILD[a.body];
   const { outfit, accent, skin } = a.colors;
@@ -139,7 +156,8 @@ export function drawHero(ctx: CanvasRenderingContext2D, a: Appearance, t: number
   const back = !!pose?.back;
   const turn = pose ? clamp01(pose.turn ?? 0) : 0.05;
   const yaw0 = 0.28 + 0.98 * turn;
-  const pr = new Proj(cx, back ? Math.PI - yaw0 : yaw0);
+  const pr = new Proj(cx, view?.yaw ?? (back ? Math.PI - yaw0 : yaw0));
+  const detail = !!view?.detail;
   const swing = pose?.swing ?? 0;
   const breathe = Math.sin(t * 1.6) * 0.22;
 
@@ -484,7 +502,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, a: Appearance, t: number
     d: 0.5,
     draw: () => tube(ctx, pr.p([0, P - 15.0, zAt(P - 15)]), pr.p([0, P - 18.2, zAt(P - 18) + 0.2]), 1.2 * Math.sqrt(wk), 1.05, skin, 0, 0.78),
   });
-  items.push({ d: 3, draw: () => drawHead(ctx, pr, a, H, wk, t, flow) });
+  items.push({ d: 3, draw: () => drawHead(ctx, pr, a, H, wk, t, flow, detail) });
   items.sort((p, q) => p.d - q.d);
   for (const it of items) it.draw();
 }
@@ -580,7 +598,7 @@ function headShape(pr: Proj, H: V3): Path2D {
   return path;
 }
 
-function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3, wk: number, t: number, flow: number): void {
+function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3, wk: number, t: number, flow: number, detail: boolean): void {
   const { accent, hair, skin } = a.colors;
   const hp = (x: number, y: number, z: number): Pt => pr.p(add(H, [x, y, z]));
   const front = pr.c > 0.02;
@@ -607,21 +625,65 @@ function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3,
     ctx.fillStyle = shadeHex(accent, 1.0);
     ctx.fill(hood);
     volume(ctx, hood, bx0, bx1, H[1] - 4.5, H[1] + 3);
+    if (detail) {
+      // Plis du tissu qui partent du sommet, alternés ombre / lumière.
+      const hc: V3 = [0, -0.55, -0.55 - flow * 0.3];
+      const hr: V3 = [3.15, 3.45, 3.45];
+      ctx.save();
+      ctx.clip(hood);
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 16; i++) {
+        const ph = -Math.PI + (TAU * (i + 0.5)) / 16;
+        if (Math.abs(ph) < 0.75) continue;
+        const pts: [number, number][] = [];
+        for (let k = 0; k <= 10; k++) pts.push([0.35 + 1.9 * (k / 10), ph + Math.sin(k * 0.7 + i * 1.3) * 0.06]);
+        ctx.strokeStyle = i % 2 ? 'rgba(0,0,0,0.34)' : 'rgba(255,236,210,0.14)';
+        ctx.lineWidth = i % 2 ? 0.22 : 0.14;
+        shellLine(ctx, pr, H, hc, hr, pts);
+      }
+      ctx.restore();
+    }
     if (front) {
       const o = hp(0, 0.45, 2.1);
       ctx.fillStyle = '#0a0706';
       ctx.beginPath();
       ctx.ellipse(o.x, o.y, 1.75 * pr.c + 0.3, 2.35, 0, 0, TAU);
       ctx.fill();
+      if (detail) {
+        // Ourlet cousu autour de l'ouverture.
+        ctx.strokeStyle = 'rgba(255,230,200,0.3)';
+        ctx.lineWidth = 0.1;
+        ctx.setLineDash([0.22, 0.26]);
+        ctx.beginPath();
+        ctx.ellipse(o.x, o.y, 1.75 * pr.c + 0.62, 2.68, 0, 0, TAU);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       const blink = Math.sin(t * 0.7) > 0.985 ? 0.1 : 1;
-      ctx.fillStyle = `rgba(255,207,106,${blink})`;
       for (const s of [-1, 1]) {
         const vis = -s * 0.4 * pr.s + 0.92 * pr.c;
         if (vis < 0.15) continue;
         const e = hp(s * 0.85, 0.15, 2.0);
+        if (detail) {
+          const halo = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 1.1);
+          halo.addColorStop(0, `rgba(255,170,70,${0.45 * blink})`);
+          halo.addColorStop(1, 'rgba(255,170,70,0)');
+          ctx.fillStyle = halo;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, 1.1, 0, TAU);
+          ctx.fill();
+        }
+        ctx.fillStyle = `rgba(255,207,106,${blink})`;
         ctx.beginPath();
         ctx.ellipse(e.x, e.y, 0.42 * vis + 0.08, 0.42, 0, 0, TAU);
         ctx.fill();
+        if (detail && blink > 0.5) {
+          // Pupille fendue au centre de la braise.
+          ctx.fillStyle = 'rgba(60,20,8,0.85)';
+          ctx.beginPath();
+          ctx.ellipse(e.x, e.y, 0.07 + 0.05 * vis, 0.3, 0, 0, TAU);
+          ctx.fill();
+        }
       }
     } else {
       // Couture de la capuche vue de dos.
@@ -639,7 +701,7 @@ function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3,
 
   const helmed = a.head === 'casque' || a.head === 'cornes';
   const horns = a.head === 'cornes';
-  if (horns) for (const s of [1, -1]) if (hp(s * 2.2, -1.4, 0.1).d < center.d) drawHorn(ctx, pr, H, s);
+  if (horns) for (const s of [1, -1]) if (hp(s * 2.2, -1.4, 0.1).d < center.d) drawHorn(ctx, pr, H, s, detail);
 
   if (helmed) {
     // Camail de mailles sous le casque : couvre le cou et tombe sur les épaules.
@@ -666,16 +728,30 @@ function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3,
     ctx.fillStyle = g;
     ctx.fill(head);
     volume(ctx, head, bx0 + 1.5, bx1 - 1.5, H[1] - 3.3, H[1] + 3.2, 0.7);
-    if (front) drawFace(ctx, pr, hp, a.head === 'rase' ? hair : null);
+    if (front) drawFace(ctx, pr, hp, a.head === 'rase' ? hair : null, detail ? { brow: hair, t } : null);
+    if (detail && a.head === 'rase') stubbleDots(ctx, pr, H, hair, [0, 1.25, 0.45], [1.98, 1.78, 1.88], 1.35, 2.75, 170, true);
     if (a.head === 'rase') {
       // Oreille du côté visible, chaume sur le crâne, cicatrice.
       for (const s of [1, -1]) {
         const e = hp(s * 2.25, 0.2, -0.1);
         if (e.d < center.d - 0.3) continue;
+        const rx = 0.55 * Math.abs(pr.s) + 0.2;
         ctx.fillStyle = shadeHex(skin, 0.8);
         ctx.beginPath();
-        ctx.ellipse(e.x, e.y, 0.55 * Math.abs(pr.s) + 0.2, 0.85, 0, 0, TAU);
+        ctx.ellipse(e.x, e.y, rx, 0.85, 0, 0, TAU);
         ctx.fill();
+        if (detail) {
+          // Pavillon : rebord et creux.
+          ctx.strokeStyle = 'rgba(70,32,22,0.55)';
+          ctx.lineWidth = 0.1;
+          ctx.beginPath();
+          ctx.ellipse(e.x, e.y + 0.05, rx * 0.6, 0.55, 0, -2.2, 1.6);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(50,22,16,0.45)';
+          ctx.beginPath();
+          ctx.ellipse(e.x, e.y + 0.1, rx * 0.25, 0.2, 0, 0, TAU);
+          ctx.fill();
+        }
       }
       capOverFace(ctx, pr, H, front, () => {
         const cap = new Path2D();
@@ -684,6 +760,7 @@ function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3,
         ctx.fillStyle = shadeHex(hair, 0.9);
         ctx.fill(cap);
         ctx.globalAlpha = 1;
+        if (detail) stubbleDots(ctx, pr, H, hair, [0, -0.6, -0.35], [2.38, 2.82, 2.88], 0.05, 1.75, 320, false);
       });
       if (front && pr.s > -0.3) {
         const s0 = hp(1.1, -2.6, 1.6);
@@ -694,15 +771,48 @@ function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3,
         ctx.moveTo(s0.x, s0.y);
         ctx.lineTo(s1.x, s1.y);
         ctx.stroke();
+        if (detail) {
+          // Points de suture en travers de la cicatrice.
+          const dx = s1.x - s0.x;
+          const dy = s1.y - s0.y;
+          const l = Math.hypot(dx, dy) || 1;
+          ctx.strokeStyle = 'rgba(40,16,12,0.75)';
+          ctx.lineWidth = 0.08;
+          ctx.beginPath();
+          for (let k = 1; k < 6; k++) {
+            const x = s0.x + (dx * k) / 6;
+            const y = s0.y + (dy * k) / 6;
+            ctx.moveTo(x - (dy / l) * 0.3, y + (dx / l) * 0.3);
+            ctx.lineTo(x + (dy / l) * 0.3, y - (dx / l) * 0.3);
+          }
+          ctx.stroke();
+        }
       }
     }
     if (a.head === 'criniere') {
       // Calotte de cheveux, mèches qui encadrent le visage.
       capOverFace(ctx, pr, H, front, () => {
         const cap = new Path2D();
-        ell(cap, pr, H, [0, -0.7, -0.45 - flow * 0.2], 2.6, 2.95, 3.05);
+        const cc: V3 = [0, -0.7, -0.45 - flow * 0.2];
+        ell(cap, pr, H, cc, 2.6, 2.95, 3.05);
         ctx.fillStyle = hairGradient(ctx, hair, H[1] - 3.8, H[1] + 2);
         ctx.fill(cap);
+        if (detail) {
+          // Mèches peignées vers l'arrière depuis une raie, ombre et reflet alternés.
+          ctx.save();
+          ctx.clip(cap);
+          ctx.lineCap = 'round';
+          for (let i = 0; i < 36; i++) {
+            const ph = -Math.PI + (TAU * (i + 0.5)) / 36;
+            const end = 1.05 + 0.8 * (1 - Math.cos(ph)) * 0.5;
+            const pts: [number, number][] = [];
+            for (let k = 0; k <= 9; k++) pts.push([0.1 + (end - 0.1) * (k / 9), ph + Math.sin(k * 0.55 + i * 2.1) * 0.05 + (k / 9) * 0.12 * Math.sign(ph)]);
+            ctx.strokeStyle = i % 3 === 0 ? 'rgba(255,240,215,0.2)' : 'rgba(0,0,0,0.32)';
+            ctx.lineWidth = i % 3 === 0 ? 0.1 : 0.16;
+            shellLine(ctx, pr, H, cc, [2.6, 2.95, 3.05], pts);
+          }
+          ctx.restore();
+        }
       });
       for (const s of [1, -1]) {
         const top = hp(s * 2.15, -0.6, 0.5);
@@ -721,6 +831,29 @@ function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3,
       ell(helm, pr, H, [0, 1.6, 0.5], 2.25, 1.75, 2.35);
       metalFill(ctx, helm, metal, hp(-1, -1.6, 1.4), center);
       volume(ctx, helm, bx0 + 1, bx1 - 1, H[1] - 3.5, H[1] + 3.4, 0.8);
+      if (detail) {
+        const hc: V3 = [0, -0.35, -0.2];
+        const hr: V3 = [2.72, 3.12, 3.12];
+        const ridge: [number, number][] = [];
+        for (let k = 0; k <= 16; k++) {
+          const u = -1.4 + (2.75 * k) / 16;
+          ridge.push([Math.abs(u), u < 0 ? Math.PI : 0]);
+        }
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 0.34;
+        shellLine(ctx, pr, H, hc, hr, ridge);
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 0.12;
+        shellLine(ctx, pr, H, hc, hr, ridge);
+        // Deux rangées de rivets, au-dessus et au-dessous de la fente.
+        for (const th of [1.3, 1.95]) {
+          for (let ph = -1.5; ph <= 1.51; ph += 0.375) {
+            const { q, f } = onShell(pr, H, hc, hr, th, ph);
+            if (f > 0.1) blob(ctx, q.x, q.y, 0.17, 0.17, metal, 1.4);
+          }
+        }
+      }
       if (front) {
         const slit = hp(0, -0.15, 2.55);
         ctx.fillStyle = '#060506';
@@ -747,17 +880,47 @@ function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3,
       ctx.clip();
       metalFill(ctx, dome, metal, hp(-1, -2.4, 1.2), center);
       ctx.restore();
+      if (detail) {
+        // Arête centrale du casque et rayures de combat.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(bx0 - 2, H[1] - 6, bx1 - bx0 + 4, brow - (H[1] - 6));
+        ctx.clip();
+        ctx.lineCap = 'round';
+        const dc: V3 = [0, -1.0, -0.3];
+        const dr: V3 = [2.62, 2.62, 3.07];
+        const ridge: [number, number][] = [];
+        for (let k = 0; k <= 16; k++) {
+          const u = -1.25 + (2.5 * k) / 16;
+          ridge.push([Math.abs(u), u < 0 ? Math.PI : 0]);
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = 0.34;
+        shellLine(ctx, pr, H, dc, dr, ridge);
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.lineWidth = 0.14;
+        shellLine(ctx, pr, H, dc, dr, ridge);
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 0.06;
+        for (const [th, ph] of [[0.75, -0.55], [0.95, 0.45], [0.5, 1.1], [1.05, -1.5], [0.6, 2.4]]) {
+          shellLine(ctx, pr, H, dc, dr, [[th, ph], [th + 0.1, ph + 0.12], [th + 0.17, ph + 0.27]]);
+        }
+        ctx.restore();
+      }
       ctx.strokeStyle = shadeHex(metal, 0.55);
       ctx.lineWidth = 0.55;
       ctx.beginPath();
+      const rivets: Pt[] = [];
       for (let i = 0; i <= 12; i++) {
         const u = -Math.PI / 2 + (Math.PI * i) / 12;
         const side = pr.c >= 0 ? 1 : -1;
         const q = hp(2.62 * Math.sin(u), -0.55, -0.3 + side * 3.0 * Math.cos(u));
+        if (i % 2 === 1) rivets.push(q);
         if (i === 0) ctx.moveTo(q.x, q.y);
         else ctx.lineTo(q.x, q.y);
       }
       ctx.stroke();
+      if (detail) for (const q of rivets) blob(ctx, q.x, q.y, 0.2, 0.2, metal, 1.25);
       for (const s of [1, -1]) {
         const g = hp(s * 2.05, 0.9, 0.9);
         if (g.d < center.d - 1.2) continue;
@@ -766,11 +929,20 @@ function drawHead(ctx: CanvasRenderingContext2D, pr: Proj, a: Appearance, H: V3,
       if (front) tube(ctx, hp(0, -0.7, 2.75), hp(0, 1.3, 2.85), 0.34, 0.3, metal, 0, 1.05);
     }
   }
-  if (horns) for (const s of [1, -1]) if (hp(s * 2.2, -1.4, 0.1).d >= center.d) drawHorn(ctx, pr, H, s);
+  if (horns) for (const s of [1, -1]) if (hp(s * 2.2, -1.4, 0.1).d >= center.d) drawHorn(ctx, pr, H, s, detail);
 }
 
-/** Orbites, nez, bouche ; barbe naissante si `stubble` est donné. */
-function drawFace(ctx: CanvasRenderingContext2D, pr: Proj, hp: (x: number, y: number, z: number) => Pt, stubble: string | null): void {
+/**
+ * Orbites, nez, bouche ; barbe naissante si `stubble` est donné. Avec `fine` (gros plan) :
+ * sourcils, paupières, iris, narines, lèvres, plis du visage.
+ */
+function drawFace(
+  ctx: CanvasRenderingContext2D,
+  pr: Proj,
+  hp: (x: number, y: number, z: number) => Pt,
+  stubble: string | null,
+  fine: { brow: string; t: number } | null,
+): void {
   for (const s of [-1, 1]) {
     const vis = -s * 0.42 * pr.s + 0.9 * pr.c;
     if (vis <= 0.05) continue;
@@ -779,6 +951,28 @@ function drawFace(ctx: CanvasRenderingContext2D, pr: Proj, hp: (x: number, y: nu
     ctx.beginPath();
     ctx.ellipse(e.x, e.y, 0.65 * vis + 0.12, 0.45, 0, 0, TAU);
     ctx.fill();
+    if (fine) {
+      fineEye(ctx, e, vis, pr.s, fine.t);
+      // Sourcil : épais vers le nez, effilé vers la tempe.
+      const b0 = hp(s * 0.3, -0.72, 2.32);
+      const b1 = hp(s * 0.95, -0.98, 2.22);
+      const b2 = hp(s * 1.6, -0.74, 1.78);
+      ctx.strokeStyle = shadeHex(fine.brow, 0.75);
+      ctx.lineCap = 'round';
+      for (const [w, k] of [[0.3, 0.55], [0.18, 1]] as const) {
+        ctx.lineWidth = w * (0.4 + 0.6 * vis);
+        ctx.beginPath();
+        ctx.moveTo(b0.x, b0.y);
+        ctx.quadraticCurveTo(b1.x, b1.y, b0.x + (b2.x - b0.x) * k, b0.y + (b2.y - b0.y) * k);
+        ctx.stroke();
+      }
+      // Cerne sous l'œil.
+      ctx.fillStyle = 'rgba(60,28,20,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(e.x, e.y + 0.42, 0.5 * vis + 0.08, 0.14, 0, 0, TAU);
+      ctx.fill();
+      continue;
+    }
     ctx.fillStyle = 'rgba(235,225,205,0.6)';
     ctx.beginPath();
     ctx.ellipse(e.x + 0.1 * pr.s, e.y + 0.05, 0.2 * vis + 0.05, 0.16, 0, 0, TAU);
@@ -801,12 +995,15 @@ function drawFace(ctx: CanvasRenderingContext2D, pr: Proj, hp: (x: number, y: nu
   ctx.fill();
   const m0 = hp(-0.62, 1.85, 2.0);
   const m1 = hp(0.62, 1.85, 2.0);
-  ctx.strokeStyle = 'rgba(70,30,24,0.75)';
-  ctx.lineWidth = 0.28;
-  ctx.beginPath();
-  ctx.moveTo(m0.x, m0.y);
-  ctx.lineTo(m1.x, m1.y);
-  ctx.stroke();
+  if (fine) fineMouth(ctx, pr, hp, m0, m1);
+  else {
+    ctx.strokeStyle = 'rgba(70,30,24,0.75)';
+    ctx.lineWidth = 0.28;
+    ctx.beginPath();
+    ctx.moveTo(m0.x, m0.y);
+    ctx.lineTo(m1.x, m1.y);
+    ctx.stroke();
+  }
   if (stubble) {
     const j = hp(0, 2.1, 1.1);
     ctx.fillStyle = shadeHex(stubble, 0.8);
@@ -815,6 +1012,136 @@ function drawFace(ctx: CanvasRenderingContext2D, pr: Proj, hp: (x: number, y: nu
     ctx.ellipse(j.x, j.y, pr.ext(1.85, 1.6), 1.1, 0, 0, Math.PI);
     ctx.fill();
     ctx.globalAlpha = 1;
+  }
+}
+
+/** Œil en gros plan : blanc en amande, iris ambré, pupille, reflet, paupière ; il cligne. */
+function fineEye(ctx: CanvasRenderingContext2D, e: Pt, vis: number, s: number, t: number): void {
+  const w = 0.56 * vis + 0.08;
+  const h = 0.27;
+  const top = (): void => {
+    ctx.moveTo(e.x - w, e.y + 0.03);
+    ctx.quadraticCurveTo(e.x, e.y - h * 1.6, e.x + w, e.y + 0.03);
+  };
+  ctx.lineCap = 'round';
+  if (Math.sin(t * 0.9 + 1.7) > 0.975) {
+    ctx.strokeStyle = 'rgba(30,14,10,0.85)';
+    ctx.lineWidth = 0.12;
+    ctx.beginPath();
+    ctx.moveTo(e.x - w, e.y + 0.03);
+    ctx.quadraticCurveTo(e.x, e.y + 0.14, e.x + w, e.y + 0.03);
+    ctx.stroke();
+    return;
+  }
+  const almond = new Path2D();
+  almond.moveTo(e.x - w, e.y + 0.03);
+  almond.quadraticCurveTo(e.x, e.y - h * 1.6, e.x + w, e.y + 0.03);
+  almond.quadraticCurveTo(e.x, e.y + h * 1.25, e.x - w, e.y + 0.03);
+  ctx.fillStyle = 'rgb(208,196,176)';
+  ctx.fill(almond);
+  ctx.save();
+  ctx.clip(almond);
+  // L'iris glisse vers le côté où la tête est tournée : le regard suit le spectateur.
+  const ix = e.x - s * 0.08 * vis;
+  const iy = e.y - 0.02;
+  const rx = 0.23 * vis + 0.04;
+  const iris = ctx.createRadialGradient(ix - 0.05, iy - 0.05, 0.02, ix, iy, 0.26);
+  iris.addColorStop(0, '#c08a4a');
+  iris.addColorStop(0.65, '#7a5230');
+  iris.addColorStop(1, '#2a1a10');
+  ctx.fillStyle = iris;
+  ctx.beginPath();
+  ctx.ellipse(ix, iy, rx, 0.25, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = '#0b0705';
+  ctx.beginPath();
+  ctx.ellipse(ix, iy, rx * 0.45, 0.11, 0, 0, TAU);
+  ctx.fill();
+  // Ombre de la paupière supérieure sur le globe.
+  ctx.fillStyle = 'rgba(30,14,10,0.35)';
+  ctx.fillRect(e.x - w, e.y - h * 1.6, w * 2, h * 0.75);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,250,240,0.95)';
+  ctx.beginPath();
+  ctx.arc(ix - rx * 0.35, iy - 0.09, 0.05, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(30,14,10,0.9)';
+  ctx.lineWidth = 0.12;
+  ctx.beginPath();
+  top();
+  ctx.stroke();
+  // Pli de la paupière, plus haut.
+  ctx.strokeStyle = 'rgba(60,28,20,0.4)';
+  ctx.lineWidth = 0.06;
+  ctx.beginPath();
+  ctx.moveTo(e.x - w * 0.8, e.y - 0.14);
+  ctx.quadraticCurveTo(e.x, e.y - h * 2.0, e.x + w * 0.9, e.y - 0.1);
+  ctx.stroke();
+}
+
+/** Bouche, narines et plis en gros plan. */
+function fineMouth(ctx: CanvasRenderingContext2D, pr: Proj, hp: (x: number, y: number, z: number) => Pt, m0: Pt, m1: Pt): void {
+  ctx.lineCap = 'round';
+  for (const s of [-1, 1]) {
+    const vis = -s * 0.4 * pr.s + 0.9 * pr.c;
+    if (vis < 0.1) continue;
+    const n = hp(s * 0.3, 1.2, 2.45);
+    ctx.fillStyle = 'rgba(35,15,10,0.7)';
+    ctx.beginPath();
+    ctx.ellipse(n.x, n.y, 0.13 * vis + 0.03, 0.08, 0, 0, TAU);
+    ctx.fill();
+    // Aile du nez puis sillon jusqu'au coin de la bouche.
+    const w0 = hp(s * 0.5, 0.95, 2.3);
+    const f0 = hp(s * 0.62, 1.15, 2.2);
+    const f1 = hp(s * 0.85, 1.9, 1.85);
+    ctx.strokeStyle = 'rgba(50,22,16,0.32)';
+    ctx.lineWidth = 0.08;
+    ctx.beginPath();
+    ctx.moveTo(w0.x, w0.y);
+    ctx.quadraticCurveTo(f0.x, f0.y, f1.x, f1.y);
+    ctx.stroke();
+  }
+  // Lèvre supérieure en arc de Cupidon, lèvre inférieure charnue avec un reflet.
+  const pl = hp(-0.2, 1.63, 2.2);
+  const pc = hp(0, 1.7, 2.22);
+  const pR = hp(0.2, 1.63, 2.2);
+  const mid = hp(0, 1.88, 2.15);
+  ctx.fillStyle = 'rgba(115,48,40,0.55)';
+  ctx.beginPath();
+  ctx.moveTo(m0.x, m0.y);
+  ctx.quadraticCurveTo(pl.x - 0.15, pl.y + 0.05, pl.x, pl.y);
+  ctx.lineTo(pc.x, pc.y);
+  ctx.lineTo(pR.x, pR.y);
+  ctx.quadraticCurveTo(pR.x + 0.15, pR.y + 0.05, m1.x, m1.y);
+  ctx.quadraticCurveTo(mid.x, mid.y, m0.x, m0.y);
+  ctx.fill();
+  const lo = hp(0, 2.08, 2.05);
+  ctx.fillStyle = 'rgba(140,70,58,0.42)';
+  ctx.beginPath();
+  ctx.ellipse(lo.x, lo.y, pr.ext(0.46, 0.15), 0.17, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,225,205,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(lo.x - 0.1, lo.y - 0.03, pr.ext(0.18, 0.05), 0.06, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(55,20,16,0.9)';
+  ctx.lineWidth = 0.12;
+  ctx.beginPath();
+  ctx.moveTo(m0.x, m0.y);
+  ctx.quadraticCurveTo(mid.x, mid.y, m1.x, m1.y);
+  ctx.stroke();
+  // Creux sous la lèvre et pommette éclairée.
+  const ch = hp(0, 2.42, 1.85);
+  ctx.fillStyle = 'rgba(50,22,16,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(ch.x, ch.y, pr.ext(0.4, 0.1), 0.1, 0, 0, TAU);
+  ctx.fill();
+  const cb = hp(-1.25, 0.55, 1.7);
+  if (0.45 * pr.s + 0.9 * pr.c > 0.2) {
+    ctx.fillStyle = 'rgba(255,232,210,0.16)';
+    ctx.beginPath();
+    ctx.ellipse(cb.x, cb.y, 0.55 * Math.abs(pr.c) + 0.15, 0.32, 0, 0, TAU);
+    ctx.fill();
   }
 }
 
@@ -853,13 +1180,13 @@ function drawHairBack(ctx: CanvasRenderingContext2D, pr: Proj, color: string, H:
   volume(ctx, path, secs[0].c - 3, secs[0].c + 3, H[1] - 3, H[1] + 7.2);
 }
 
-function drawHorn(ctx: CanvasRenderingContext2D, pr: Proj, H: V3, s: number): void {
+function drawHorn(ctx: CanvasRenderingContext2D, pr: Proj, H: V3, s: number, detail = false): void {
   const p0: V3 = [s * 2.2, -1.4, 0.1];
   const p1: V3 = [s * 5.0, -2.0, 0.4];
   const p2: V3 = [s * 4.6, -6.4, 1.3];
   const left: Pt[] = [];
   const right: Pt[] = [];
-  const N = 8;
+  const N = detail ? 24 : 8;
   const pts: Pt[] = [];
   for (let i = 0; i <= N; i++) {
     const k = i / N;
@@ -885,6 +1212,79 @@ function drawHorn(ctx: CanvasRenderingContext2D, pr: Proj, H: V3, s: number): vo
   for (let i = N; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
   ctx.closePath();
   ctx.fill();
+  if (!detail) return;
+  // Anneaux de croissance, serrés à la base ; liseré clair sur le dos de la corne.
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(40,28,16,0.55)';
+  ctx.lineWidth = 0.1;
+  ctx.beginPath();
+  for (let i = 1; i < N - 2; i += i < N / 2 ? 1 : 2) {
+    ctx.moveTo(left[i].x, left[i].y);
+    ctx.quadraticCurveTo(pts[i].x + (pts[i + 1].x - pts[i].x) * 0.8, pts[i].y + (pts[i + 1].y - pts[i].y) * 0.8, right[i].x, right[i].y);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,248,230,0.45)';
+  ctx.lineWidth = 0.12;
+  ctx.beginPath();
+  left.forEach((q, i) => {
+    const m = lerp(q, pts[i], 0.35);
+    if (i) ctx.lineTo(m.x, m.y);
+    else ctx.moveTo(m.x, m.y);
+  });
+  ctx.stroke();
+}
+
+// --- Détails de gros plan ---------------------------------------------------------
+
+/** Point d'un ellipsoïde de la tête (θ depuis le sommet, φ autour : 0 = devant) et à quel point il nous fait face. */
+function onShell(pr: Proj, H: V3, c: V3, r: V3, th: number, ph: number): { q: Pt; f: number } {
+  const st = Math.sin(th);
+  const nx = st * Math.sin(ph);
+  const ny = -Math.cos(th);
+  const nz = st * Math.cos(ph);
+  const q = pr.p([H[0] + c[0] + r[0] * nx, H[1] + c[1] + r[1] * ny, H[2] + c[2] + r[2] * nz]);
+  return { q, f: -nx * pr.s + nz * pr.c };
+}
+
+/** Trace une courbe posée sur un ellipsoïde, seulement là où elle est tournée vers nous. */
+function shellLine(ctx: CanvasRenderingContext2D, pr: Proj, H: V3, c: V3, r: V3, pts: [number, number][]): void {
+  let open = false;
+  ctx.beginPath();
+  for (const [th, ph] of pts) {
+    const { q, f } = onShell(pr, H, c, r, th, ph);
+    if (f > 0.04) {
+      if (open) ctx.lineTo(q.x, q.y);
+      else ctx.moveTo(q.x, q.y);
+      open = true;
+    } else open = false;
+  }
+  ctx.stroke();
+}
+
+/** Poils ras semés sur un ellipsoïde (barbe de trois jours, crâne rasé). */
+function stubbleDots(ctx: CanvasRenderingContext2D, pr: Proj, H: V3, color: string, c: V3, r: V3, th0: number, th1: number, n: number, jaw: boolean): void {
+  ctx.fillStyle = shadeHex(color, 0.7);
+  ctx.globalAlpha = 0.55;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const h1 = fract(Math.sin(i * 12.9898) * 43758.5453);
+    const h2 = fract(Math.sin(i * 78.233) * 12543.123);
+    const th = th0 + (th1 - th0) * h1;
+    const ph = jaw ? (h2 - 0.5) * 3.1 : -Math.PI + TAU * h2;
+    // Sur la mâchoire, on épargne les lèvres et le haut des joues.
+    if (jaw && Math.abs(ph) < 0.42 && th < 1.95) continue;
+    if (jaw && Math.abs(ph) > 0.9 && th < 1.7) continue;
+    const { q, f } = onShell(pr, H, c, r, th, ph);
+    if (f < 0.15) continue;
+    ctx.moveTo(q.x + 0.06, q.y);
+    ctx.arc(q.x, q.y, 0.06, 0, TAU);
+  }
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function fract(v: number): number {
+  return v - Math.floor(v);
 }
 
 // --- Épée ---------------------------------------------------------------------

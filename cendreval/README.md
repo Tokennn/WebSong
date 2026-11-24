@@ -1,8 +1,25 @@
-# Cendreval
+<p align="center">
+  <img src="docs/banner.svg" width="100%" alt="CENDREVAL écrit en glyphes ASCII couleur braise, au-dessus d'un sol de cendres où montent des étincelles">
+</p>
+
+<p align="center">
+  <code>dark fantasy</code> · <code>ASCII en 3D</code> · <code>WebGL2</code> · <code>TypeScript</code> · <code>navigateur</code>
+</p>
+
+<p align="center"><i>Les Terres Cendrées brûlent encore. Forge ton héros, prends ta lame, marche vers les tours.</i></p>
+
+```
+ . ' ` ^ " , : ; I l ! i > < ~ + _ - ? ] [ } { 1 ) ( | \ / t f j r x n u v c z X Y U J C L Q 0 O Z m w q p d b k h a o * # M W & 8 % B @ $
+ └────────────── ombre ─────────────────────────────── chaque case prend le glyphe de sa lumière ─────────────────────────────── braise ──┘
+```
 
 Jeu d'aventure dark fantasy **entièrement rendu en ASCII**, dans le navigateur.
 On forge son héros (tête, corps, tenue, couleurs, pseudo), puis on part dans
 les Terres Cendrées : chiens-loups, clans hostiles, dragons, tours à escalader.
+Pas une image, pas un sprite : le monde est une vraie scène 3D, et chaque case de
+l'écran y choisit un caractère.
+
+## ▸ Jouer
 
 ```bash
 npm install
@@ -10,7 +27,24 @@ npm run dev        # http://localhost:5193
 npm run build      # typecheck + build dans dist/
 ```
 
-## Commandes
+## ▸ La forge : page d'accueil
+
+Le héros se tient au centre, sur un socle de braise, rendu en glyphes à chaque image.
+
+| Geste | Souris / tactile | Clavier |
+| --- | --- | --- |
+| Tourner le héros sur 360° | glisser à gauche ou à droite (il garde son élan) | ← / → sur l'aperçu, ou boutons ◂ ▸ |
+| Gros plan sur la tête | cliquer sur la tête, ou « Gros plan · tête » | Entrée sur l'aperçu |
+| Revenir au corps entier | cliquer n'importe où, ou « Corps entier » | Échap |
+
+En gros plan, la caméra plonge vers le visage et le dessin passe en mode détaillé :
+iris ambré et pupille, paupières qui clignent, sourcils, narines, lèvres, sillons ;
+chaume semé poil par poil sur le crâne rasé, points de suture sur la cicatrice ;
+mèches peignées de la crinière ; plis et ourlet cousu de la capuche, yeux de braise
+à pupille fendue ; arête, rivets et rayures du casque ; anneaux de croissance des
+cornes. On peut continuer à tourner la tête en gros plan.
+
+## ▸ Commandes en jeu
 
 | Action | Clavier / souris | Tactile |
 | --- | --- | --- |
@@ -20,7 +54,49 @@ npm run build      # typecheck + build dans dist/
 | Caméra plus près / plus loin | molette, + / − (ou Page↑ / Page↓) | — |
 | Pause | Échap | — |
 
-## Architecture
+## ▸ Direction artistique
+
+<p align="center">
+  <img src="docs/palette.svg" width="100%" alt="Palette : nuit, braise, braise vive, or, os, cendre, sang, sang séché, lune ; et rampe des glyphes de l'ombre à la lumière">
+</p>
+
+**Voix.** Dark fantasy, terminal de forge : sobre, chaud, menaçant. Rien n'est
+joli pour être joli ; tout est éclairé par quelque chose (la lune, une torche, un feu).
+
+**L'idée.** Un écran de forge en ASCII éclairé par la braise. Le monde est noir par
+défaut ; la lumière fait apparaître les glyphes, et leur densité *est* la lumière.
+
+**Glyphes.**
+- Une case est 1,4 fois plus haute que large ; tout se mesure en largeurs de case.
+- La densité suit la lumière, la rampe va de `.` à `$`. Une face éclairée est dense,
+  une face à l'ombre clairsemée, le noir est vide.
+- Les bords prennent la forme du contour : `( ) / \ _ ¯`. Un trait fin (lame, patte,
+  brin d'herbe) prend un glyphe dans son axe : `- | / \`.
+- Chaque matière a son comportement : la pierre garde un glyphe figé, l'herbe suit
+  le vent, l'eau reflète la rive, le feu scintille.
+- Les glyphes sont petits et nombreux (10 px en jeu) : on lit des formes, pas des lettres.
+
+**Lumière.** Une lumière clé chaude en haut à gauche, un liseré froid de lune
+(`#96acdc`) sur le bord opposé, de l'occlusion vers le bas. Feux, yeux et braises
+ignorent l'obscurité et diffusent un halo. Un vignettage ferme l'image.
+
+**Personnages.** De petits mannequins 3D (squelette articulé, volumes éclairés),
+jamais des sprites plats : ils tournent, se penchent à la course, et leurs tenues
+donnent des textures de caractères différentes (anneaux de mailles, lames de plates,
+plis de robe).
+
+**Sang.** Rouge vif à l'impact, brun en séchant : il gicle dans le sens du coup,
+retombe en arc, teinte le sol sans effacer son grain, puis s'efface.
+
+**Typographie.**
+- Titres : Cinzel 800, rastérisé en glyphes pour le logo.
+- Tout le reste : JetBrains Mono.
+
+**Interface.** Panneaux presque noirs, filets de 1 px couleur os à 16 %, coins de
+4 px. La braise (`#e8833a`) marque l'état actif. L'or (`#f2c46b`) marque les valeurs
+et le butin. Le texte secondaire est en cendre (`#8b8273`). Cibles de 40 à 44 px.
+
+## ▸ Architecture
 
 ```
 src/
@@ -45,7 +121,7 @@ src/
 │   └── Composer.ts         "shader ASCII" : G-buffer → glyphes (matières, silhouettes, reflets)
 ├── character/              le héros hors du monde
 │   ├── appearance.ts       options (tête/corps/tenue/couleurs) et stats
-│   ├── portrait.ts         dessin du héros (squelette articulé, volumes éclairés) : création et jeu
+│   ├── portrait.ts         dessin du héros (squelette articulé, volumes éclairés, angle libre, détails de gros plan)
 │   └── storage.ts          sauvegarde localStorage (validée au chargement)
 ├── world/                  données du monde, sans rendu ni entités
 │   ├── tiles.ts            types de cases (solide, vitesse, couleur minimap)
@@ -63,11 +139,11 @@ src/
 │   ├── Dragon.ts           vole, crache du feu, sprite rastérisé en direct
 │   ├── physics.ts          déplacement avec collision par axe
 │   └── spawner.ts          peuplement initial + fabriques de réapparition
-├── fx/Fx.ts                particules : lames, sang, dégâts, feu, cendres
+├── fx/Fx.ts                particules (lames, gouttes de sang, dégâts, feu, cendres) et taches de sang au sol
 ├── game/context.ts         GameContext et View : le contrat entités ↔ scène
 ├── scenes/
 │   ├── Scene.ts            interface enter / exit / update / render
-│   ├── CreatorScene.ts     page d'accueil et personnalisation
+│   ├── CreatorScene.ts     page d'accueil : personnalisation, rotation 360°, gros plan sur la tête
 │   └── GameScene.ts        simulation, éclairage, rendu, HUD, sauvegarde
 ├── ui/
 │   ├── Hud.ts              vie, XP, lieu, journal, mort, pause (DOM)
@@ -98,7 +174,9 @@ src/
 - **Shader ASCII** (`render/Rasterizer.ts`) : le portrait, le titre et les dragons
   sont dessinés avec l'API Canvas 2D, réduits à un pixel par case, puis chaque pixel
   devient un glyphe selon sa luminance. Les motifs des tenues (anneaux, plaques,
-  sangles) donnent donc des textures de caractères différentes.
+  sangles) donnent donc des textures de caractères différentes. Sur la page d'accueil,
+  le rastériseur couvre toute la scène : le gros plan est un vrai zoom de caméra sur le
+  dessin vectoriel, pas un agrandissement de glyphes, d'où le surcroît de détail.
 - **Lumière** : clair de lune voilé de nuages, torche du héros, feux des villages
   et des camps. Les entités lisent la lumière de leur case. Les yeux des
   chiens-loups et le feu ignorent l'obscurité.
@@ -107,20 +185,35 @@ src/
   ou l'IA sans canvas.
 
 - **Caméra rapprochée et personnages en vraies formes.** Au niveau du héros, une case du
-  monde fait `zoom` colonnes (4,4 par défaut, molette pour régler) ; de près la caméra
+  monde fait `zoom` colonnes d'une grille de glyphes de 15 px (4,4 par défaut, molette pour
+  régler). Les glyphes réels font 10 px (`CELL_H`) : même cadrage, 1,5 fois plus de glyphes
+  par case, pour une image ASCII fine. De près la caméra
   s'abaisse vers l'horizon. Héros, guerriers, chiens-loups, dragons et décor sont dessinés
   en Canvas 2D à 3 × 4 sous-pixels par glyphe (`SpriteRaster`) : une case pleine prend un
   glyphe selon sa lumière, un bord de silhouette un glyphe qui épouse le contour, un trait
   fin (lame, patte, brin d'herbe) un glyphe dans son axe. Chaque silhouette est détourée
   d'un liseré sombre, remplit le fond lissé, pose une ombre au sol et se perd dans la brume.
+- **Sang.** Chaque coup projette des gouttes dans son sens : elles montent, retombent en arc
+  et tachent le sol à leur point de chute (tache + éclaboussures dans le sens de la course).
+  Les taches teintent le sol sans effacer son grain, sèchent du rouge au brun en 25 s et
+  s'effacent après une minute environ ; un corps laisse une flaque qui s'étale. Le héros
+  mal en point saigne goutte à goutte.
 
 ### Où ajouter quoi
 
 - Une nouvelle matière : un id dans `tiles.ts`, un `case` dans `materials.ts`.
 - Un monstre : une classe dans `entities/` qui étend `Entity`, peuplée dans `spawner.ts`.
-- Une option de personnage : `appearance.ts` (option + bonus) et `portrait.ts` (dessin).
+- Une option de personnage : `appearance.ts` (option + bonus) et `portrait.ts` (dessin ;
+  ses détails de gros plan sous `detail`).
 - Du texte d'univers : `world/lore.ts`.
 
 En développement, la scène active est accessible dans la console via `window.__scene`.
 `?play` saute l'écran de création, et `?play&at=tower` (ou `village`, `camp`, `lair`)
 pose le héros près d'un lieu.
+
+---
+
+<p align="center"><code>. , : ; + * # % @&nbsp;&nbsp;·&nbsp;&nbsp;forgé dans la cendre&nbsp;&nbsp;·&nbsp;&nbsp;@ % # * + ; : , .</code></p>
+
+<sub>Les images de <code>docs/</code> sont générées : le titre de la bannière est rastérisé comme dans le jeu
+(texte serif, une case par glyphe, glyphe choisi par la luminance).</sub>

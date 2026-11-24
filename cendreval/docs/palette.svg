@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 330" width="1200" height="330" role="img" aria-label="Palette et rampe de glyphes de Cendreval">
+  <title>Palette de Cendreval</title>
+  <rect width="1200" height="330" rx="6" fill="#0d0e12"/>
+  <text x="40" y="26" fill="#8b8273" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">palette · styles/main.css</text>
+  <g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+    <rect x="40.0" y="40" width="113.8" height="96" rx="4" fill="#07080b" stroke="#2a2622"/>
+<text x="96.9" y="92" fill="#d9cfb8" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="40.0" y="160" fill="#d9cfb8" font-size="14">Nuit</text>
+<text x="40.0" y="178" fill="#f2c46b" font-size="12">#07080b</text>
+<text x="40.0" y="196" fill="#8b8273" font-size="11">fond, ombres</text>
+<rect x="165.8" y="40" width="113.8" height="96" rx="4" fill="#e8833a"/>
+<text x="222.7" y="92" fill="#07080b" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="165.8" y="160" fill="#d9cfb8" font-size="14">Braise</text>
+<text x="165.8" y="178" fill="#f2c46b" font-size="12">#e8833a</text>
+<text x="165.8" y="196" fill="#8b8273" font-size="11">feu, accents</text>
+<rect x="291.6" y="40" width="113.8" height="96" rx="4" fill="#ffb867"/>
+<text x="348.4" y="92" fill="#07080b" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="291.6" y="160" fill="#d9cfb8" font-size="14">Braise vive</text>
+<text x="291.6" y="178" fill="#f2c46b" font-size="12">#ffb867</text>
+<text x="291.6" y="196" fill="#8b8273" font-size="11">survol, étincelles</text>
+<rect x="417.3" y="40" width="113.8" height="96" rx="4" fill="#f2c46b"/>
+<text x="474.2" y="92" fill="#07080b" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="417.3" y="160" fill="#d9cfb8" font-size="14">Or</text>
+<text x="417.3" y="178" fill="#f2c46b" font-size="12">#f2c46b</text>
+<text x="417.3" y="196" fill="#8b8273" font-size="11">valeurs, butin</text>
+<rect x="543.1" y="40" width="113.8" height="96" rx="4" fill="#d9cfb8"/>
+<text x="600.0" y="92" fill="#07080b" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="543.1" y="160" fill="#d9cfb8" font-size="14">Os</text>
+<text x="543.1" y="178" fill="#f2c46b" font-size="12">#d9cfb8</text>
+<text x="543.1" y="196" fill="#8b8273" font-size="11">texte, parchemin</text>
+<rect x="668.9" y="40" width="113.8" height="96" rx="4" fill="#8b8273"/>
+<text x="725.8" y="92" fill="#07080b" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="668.9" y="160" fill="#d9cfb8" font-size="14">Cendre</text>
+<text x="668.9" y="178" fill="#f2c46b" font-size="12">#8b8273</text>
+<text x="668.9" y="196" fill="#8b8273" font-size="11">texte secondaire</text>
+<rect x="794.7" y="40" width="113.8" height="96" rx="4" fill="#c4402f"/>
+<text x="851.6" y="92" fill="#d9cfb8" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="794.7" y="160" fill="#d9cfb8" font-size="14">Sang</text>
+<text x="794.7" y="178" fill="#f2c46b" font-size="12">#c4402f</text>
+<text x="794.7" y="196" fill="#8b8273" font-size="11">coups, danger</text>
+<rect x="920.4" y="40" width="113.8" height="96" rx="4" fill="#3e120e"/>
+<text x="977.3" y="92" fill="#d9cfb8" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="920.4" y="160" fill="#d9cfb8" font-size="14">Sang séché</text>
+<text x="920.4" y="178" fill="#f2c46b" font-size="12">#3e120e</text>
+<text x="920.4" y="196" fill="#8b8273" font-size="11">taches au sol</text>
+<rect x="1046.2" y="40" width="113.8" height="96" rx="4" fill="#96acdc"/>
+<text x="1103.1" y="92" fill="#07080b" font-size="15" text-anchor="middle" opacity="0.85">,&gt;]|xYObM@</text>
+<text x="1046.2" y="160" fill="#d9cfb8" font-size="14">Lune</text>
+<text x="1046.2" y="178" fill="#f2c46b" font-size="12">#96acdc</text>
+<text x="1046.2" y="196" fill="#8b8273" font-size="11">liseré froid</text>
+<text x="40" y="262" font-size="20" textLength="1120" lengthAdjust="spacing" xml:space="preserve"><tspan fill="#3f291e">.</tspan><tspan fill="#422a1e">'</tspan><tspan fill="#442b1e">`</tspan><tspan fill="#472c1e">^</tspan><tspan fill="#4a2d1e">"</tspan><tspan fill="#4d2e1f">,</tspan><tspan fill="#50301f">:</tspan><tspan fill="#53311f">;</tspan><tspan fill="#55331f">I</tspan><tspan fill="#58341f">l</tspan><tspan fill="#5b3620">!</tspan><tspan fill="#5e3720">i</tspan><tspan fill="#613920">&gt;</tspan><tspan fill="#643b21">&lt;</tspan><tspan fill="#663d21">~</tspan><tspan fill="#693e22">+</tspan><tspan fill="#6c4022">_</tspan><tspan fill="#6f4223">-</tspan><tspan fill="#724423">?</tspan><tspan fill="#754624">]</tspan><tspan fill="#774824">[</tspan><tspan fill="#7a4a25">}</tspan><tspan fill="#7d4c26">{</tspan><tspan fill="#804e26">1</tspan><tspan fill="#835027">)</tspan><tspan fill="#855228">(</tspan><tspan fill="#885429">|</tspan><tspan fill="#8b562a">\</tspan><tspan fill="#8e592a">/</tspan><tspan fill="#915b2b">t</tspan><tspan fill="#945d2c">f</tspan><tspan fill="#965f2d">j</tspan><tspan fill="#99612e">r</tspan><tspan fill="#9c642f">x</tspan><tspan fill="#9f6630">n</tspan><tspan fill="#a26831">u</tspan><tspan fill="#a56b32">v</tspan><tspan fill="#a76d33">c</tspan><tspan fill="#aa6f34">z</tspan><tspan fill="#ad7236">X</tspan><tspan fill="#b07437">Y</tspan><tspan fill="#b37738">U</tspan><tspan fill="#b67939">J</tspan><tspan fill="#b87c3a">C</tspan><tspan fill="#bb7e3c">L</tspan><tspan fill="#be813d">Q</tspan><tspan fill="#c1833e">0</tspan><tspan fill="#c48640">O</tspan><tspan fill="#c68841">Z</tspan><tspan fill="#c98b43">m</tspan><tspan fill="#cc8d44">w</tspan><tspan fill="#cf9046">q</tspan><tspan fill="#d29247">p</tspan><tspan fill="#d59549">d</tspan><tspan fill="#d7984a">b</tspan><tspan fill="#da9a4c">k</tspan><tspan fill="#dd9d4e">h</tspan><tspan fill="#e0a04f">a</tspan><tspan fill="#e3a251">o</tspan><tspan fill="#e6a553">*</tspan><tspan fill="#e8a855">#</tspan><tspan fill="#ebab57">M</tspan><tspan fill="#eead58">W</tspan><tspan fill="#f1b05a">&amp;</tspan><tspan fill="#f4b35c">8</tspan><tspan fill="#f7b65e">%</tspan><tspan fill="#f9b860">B</tspan><tspan fill="#fcbb62">@</tspan><tspan fill="#ffbe64">$</tspan></text>
+<text x="40" y="236" fill="#8b8273" font-size="12">rampe de luminance : chaque case prend le glyphe de sa lumière (render/glyphs.ts)</text>
+<text x="40" y="300" fill="#8b8273" font-size="12">◂ ombre</text>
+<text x="1160" y="300" fill="#8b8273" font-size="12" text-anchor="end">lumière ▸</text>
+  </g>
+</svg>

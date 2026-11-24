@@ -33,8 +33,13 @@ export class Camera {
   far = 600;
   cols = 1;
   rows = 1;
-  /** Colonnes d'écran par largeur de case, au niveau du héros. */
+  /**
+   * Cadrage : 1 largeur de case du monde = `zoom` colonnes d'une grille de référence
+   * (glyphes de 15 px). `cellScale` = taille de référence / taille réelle des glyphes :
+   * des glyphes plus petits gardent le même cadrage, avec plus de glyphes par case.
+   */
   zoom = 3;
+  cellScale = 1;
   private aspect = 1;
   private tanY = 1;
 
@@ -55,8 +60,13 @@ export class Camera {
     this.pitch = (57 - 22 * k) * DEG;
     this.tanY = Math.tan(this.fovY / 2);
     // Distance telle que la largeur visible au niveau de la cible = `cols / zoom` cases.
-    this.dist = this.cols / 2 / (this.tanY * this.aspect * z);
+    this.dist = this.cols / 2 / (this.tanY * this.aspect * z * this.cellScale);
     this.far = this.dist * 7;
+  }
+
+  /** Colonnes d'écran réelles par largeur de case, au niveau du héros. */
+  get colsPerTile(): number {
+    return this.zoom * this.cellScale;
   }
 
   /** Vise un point du monde (x, y en cases ; h = hauteur). */
@@ -115,6 +125,7 @@ export class Camera {
     this.cols = o.cols;
     this.rows = o.rows;
     this.zoom = o.zoom;
+    this.cellScale = o.cellScale;
     this.aspect = o.aspect;
     this.tanY = o.tanY;
   }

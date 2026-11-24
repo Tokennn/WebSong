@@ -25,6 +25,8 @@ export interface PutOptions {
   emissive?: boolean;
   /** Luminosité minimale (un dragon dans le ciel reste visible). */
   minLight?: number;
+  /** Hauteur au-dessus du sol, en cases (par défaut : poitrine, 1,1). */
+  h?: number;
 }
 
 /**

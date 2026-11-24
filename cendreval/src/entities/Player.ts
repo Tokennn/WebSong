@@ -35,6 +35,7 @@ export class Player extends Entity {
   private turn = 0.15;
   private sinceHurt = 10;
   private invuln = 0;
+  private dripT = 0;
 
   constructor(
     x: number,
@@ -83,6 +84,14 @@ export class Player extends Entity {
     this.turn += (turnTo - this.turn) * (1 - Math.exp(-dt * 10));
 
     if (g.input.attack() && this.atkCd <= 0) this.attack(g);
+
+    // Blessé : le sang goutte, de plus en plus souvent quand la vie baisse.
+    const hurtK = this.hp / this.maxHp;
+    this.dripT -= dt;
+    if (hurtK < 0.45 && this.dripT <= 0) {
+      g.fx.drip(this.x, this.y, this.bloodColor, 1.2);
+      this.dripT = 0.15 + hurtK * 1.4 + Math.random() * 0.3;
+    }
 
     // Récupération : lente hors combat, rapide près d'un feu sacré.
     if (this.sinceHurt > 5) this.hp = Math.min(this.maxHp, this.hp + 3 * dt);

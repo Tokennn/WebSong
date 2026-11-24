@@ -261,7 +261,7 @@ export class WorldRenderer {
     gl.uniform1f(u.uDepthScale, 1 / cam.far);
     gl.uniform1f(u.uTime, f.time);
     // De près, une case couvre plusieurs glyphes : le grain s'affine pour qu'ils varient.
-    gl.uniform1f(u.uFine, Math.max(1, cam.zoom * 0.75));
+    gl.uniform1f(u.uFine, Math.max(1, cam.colsPerTile * 0.75));
     // Lune basse à l'ouest, un peu derrière la caméra : les façades sud prennent la lumière,
     // les ombres s'allongent vers le nord-est, donc vers le haut de l'écran.
     const md = norm3(-0.62, 0.62, 0.36);

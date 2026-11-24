@@ -113,6 +113,23 @@ export class AsciiCanvas {
     this.back[j + 2] *= k;
   }
 
+  /** Teinte une case (glyphe et fond) par multiplication, dosée par k (0..1). */
+  tint(x: number, y: number, mr: number, mg: number, mb: number, k: number): void {
+    if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) return;
+    const i = y * this.cols + x;
+    const fr = 1 + (mr - 1) * k;
+    const fg = 1 + (mg - 1) * k;
+    const fb = 1 + (mb - 1) * k;
+    this.r[i] *= fr;
+    this.g[i] *= fg;
+    this.b[i] *= fb;
+    if (!this.layers) return;
+    const j = i * 3;
+    this.back[j] *= fr;
+    this.back[j + 1] *= fg;
+    this.back[j + 2] *= fb;
+  }
+
   /** Ajoute de la lumière au halo autour d'une case. */
   addGlow(x: number, y: number, r: number, g: number, b: number): void {
     if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) return;
